@@ -18,6 +18,7 @@ from app.domain.contracts import (
     SessionSummary,
     SessionView,
     SnapshotView,
+    SourceInventory,
 )
 from app.services import planning
 from app.services import prepare as service
@@ -84,6 +85,20 @@ async def import_snapshot(
 @router.post("/{session_id}/snapshot:parse-ranges", response_model=SnapshotView)
 async def parse_ranges(session_id: UUID, db: Database, identity: CurrentIdentity) -> SnapshotView:
     return await service.parse_ranges(db, identity, session_id)
+
+
+@router.post("/{session_id}/source:choose", response_model=SourceInventory)
+async def choose_source(
+    session_id: UUID, db: Database, identity: CurrentIdentity
+) -> SourceInventory:
+    return await service.choose_source(db, identity, session_id)
+
+
+@router.get("/{session_id}/source/inventory", response_model=SourceInventory)
+async def source_inventory(
+    session_id: UUID, db: Database, identity: CurrentIdentity
+) -> SourceInventory:
+    return await service.source_inventory(db, identity, session_id)
 
 
 @router.post("/{session_id}/snapshot:observe", response_model=SnapshotView)

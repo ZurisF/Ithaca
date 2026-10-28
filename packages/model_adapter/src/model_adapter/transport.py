@@ -76,6 +76,7 @@ class ModelAdapter(Protocol):
         prompt_version: str,
         retry_policy: RetryPolicy,
         validate_output: Callable[[OutputT], list[str]] | None = None,
+        max_completion_tokens: int | None = None,
     ) -> OutputT: ...
 
 
@@ -134,6 +135,7 @@ class OpenAICompatibleAdapter:
         prompt_version: str,
         retry_policy: RetryPolicy,
         validate_output: Callable[[OutputT], list[str]] | None = None,
+        max_completion_tokens: int | None = None,
     ) -> OutputT:
         if not self.api_key or not self.model:
             raise ModelFailure("dependency_unavailable")
@@ -165,6 +167,10 @@ class OpenAICompatibleAdapter:
                             },
                         },
                     }
+                    if max_completion_tokens is not None:
+                        if max_completion_tokens < 1:
+                            raise ModelFailure("invalid_model_budget")
+                        payload["max_completion_tokens"] = max_completion_tokens
                     if self.client is None:
                         async with httpx.AsyncClient(timeout=remaining) as client:
                             response = await client.post(

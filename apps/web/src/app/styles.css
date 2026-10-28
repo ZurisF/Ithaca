@@ -26,6 +26,13 @@ select { max-width: 360px; }
 .session-item.active { border-color: #126b62; background: #e7f2ee; }
 .session-item small { color: #64756e; }
 .opinion { border-top: 1px solid #e3e9e4; margin-top: 24px; }
+.source-box { border: 1px solid #d8e5de; background: #f5faf6; border-radius: 12px; padding: 18px; margin: 18px 0 26px; }
+.source-box h3 { margin: 0 0 8px; }
+.source-box details { background: white; border: 1px solid #dbe3dc; border-radius: 9px; padding: 12px; max-height: 300px; overflow: auto; }
+.source-box summary { cursor: pointer; font-weight: 600; }
+.inventory-list { list-style: none; padding: 0; margin: 10px 0 0; }
+.inventory-list li { border-top: 1px solid #edf1ed; padding: 7px 0; overflow-wrap: anywhere; }
+.inventory-list small { color: #806344; display: block; }
 .inline { display: flex; gap: 10px; }
 .inline input { flex: 1; min-width: 0; }
 fieldset { margin: 24px 0 0; border: 1px solid #dbe3dc; border-radius: 10px; }

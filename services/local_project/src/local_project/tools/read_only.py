@@ -4,10 +4,10 @@ import os
 import stat
 from pathlib import Path, PurePosixPath
 
-from content_safety import ContentRejected, filter_text
+from content_safety import ContentRejected, SafetyResult, filter_text
 from local_project.errors import LocalError
+from local_project.settings import get_settings
 
-MAX_FILE_BYTES = 256_000
 HARD_EXCLUDED = frozenset(
     {
         ".git",
@@ -36,8 +36,9 @@ def is_sensitive_path(components: tuple[str, ...]) -> bool:
     )
 
 
-def read_file_text(root: Path, relative_path: str) -> str:
-    """Return only filtered text from an authorized, bounded regular file."""
+def read_file_safety(root: Path, relative_path: str) -> SafetyResult:
+    """Return filtered text and value-free redaction locations from a safe open."""
+    max_bytes = get_settings().max_file_bytes
     relative = PurePosixPath(relative_path)
     components = relative.parts
     if (
@@ -61,9 +62,9 @@ def read_file_text(root: Path, relative_path: str) -> str:
         file_descriptor = os.open(components[-1], os.O_RDONLY | os.O_NOFOLLOW, dir_fd=current)
         descriptors.append(file_descriptor)
         file_stat = os.fstat(file_descriptor)
-        if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_size > MAX_FILE_BYTES:
+        if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_size > max_bytes:
             raise LocalError(400, "source_file_rejected", "文件类型或大小不允许读取。")
-        raw = os.read(file_descriptor, MAX_FILE_BYTES + 1)
+        raw = os.read(file_descriptor, max_bytes + 1)
         if b"\x00" in raw:
             raise LocalError(400, "source_file_rejected", "二进制文件不允许读取。")
         try:
@@ -72,7 +73,11 @@ def read_file_text(root: Path, relative_path: str) -> str:
             raise LocalError(400, "source_file_rejected", "文件编码不受支持。") from exc
         content = "\n".join(lines)
         try:
-            return filter_text(content, max_chars=MAX_FILE_BYTES).text if content.strip() else ""
+            return (
+                filter_text(content, max_chars=max_bytes)
+                if content.strip()
+                else SafetyResult(text="", replacements=0, hits=())
+            )
         except ContentRejected as exc:
             raise LocalError(400, "source_file_rejected", "文件内容不允许读取。") from exc
     except OSError as exc:
@@ -80,6 +85,11 @@ def read_file_text(root: Path, relative_path: str) -> str:
     finally:
         for descriptor in reversed(descriptors):
             os.close(descriptor)
+
+
+def read_file_text(root: Path, relative_path: str) -> str:
+    """Return only filtered text from an authorized, bounded regular file."""
+    return read_file_safety(root, relative_path).text
 
 
 def read_file_range(root: Path, relative_path: str, first_line: int, last_line: int) -> str:

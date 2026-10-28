@@ -31,11 +31,18 @@ class ObserverStep(BaseModel):
         "read_file_range",
         "finish",
     ]
-    path: str | None = None
-    query: str | None = None
+    path: str | None = Field(default=None, max_length=4_096)
+    query: str | None = Field(default=None, max_length=100)
     first_line: int | None = Field(default=None, ge=1)
     last_line: int | None = Field(default=None, ge=1)
-    markdown: str | None = None
+    markdown: str | None = Field(default=None, max_length=20_000)
+
+
+def _model_input_bytes(messages: list[Message]) -> int:
+    """Conservative token upper bound for byte-based chat model tokenizers."""
+    payload = json.dumps([message.__dict__ for message in messages], ensure_ascii=False)
+    schema = json.dumps(ObserverStep.model_json_schema(), ensure_ascii=False)
+    return len(payload.encode("utf-8")) + len(schema.encode("utf-8")) + 500
 
 
 def _validate_snapshot(
@@ -137,13 +144,24 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
     total_chars = len(map_result.text)
     deadline = time.monotonic() + settings.observer_timeout_seconds
     tool_steps = 0
+    model_token_upper = 0
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 5:
             raise LocalError(503, "observer_timeout", "目录观察已超过总耗时预算。")
+        if remaining <= 20 and not evidence_lines:
+            raise LocalError(503, "observer_timeout", "目录观察未能在耗时预算内取得文件证据。")
+        time_needs_finish = bool(evidence_lines) and remaining <= 25
+        current_input = _model_input_bytes(messages)
+        current_call_upper = 2 * (current_input + settings.observer_step_max_tokens)
+        budget_needs_finish = bool(evidence_lines) and (
+            model_token_upper + 2 * current_call_upper >= settings.observer_total_model_tokens
+        )
         must_finish = (
             tool_steps >= settings.observer_tool_steps
             or total_chars >= settings.observer_total_chars
+            or budget_needs_finish
+            or time_needs_finish
         )
         if must_finish:
             partial = True
@@ -153,6 +171,14 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
                     content="工具预算已到。下一步必须 finish，明确写部分分析与未覆盖范围。",
                 )
             )
+        input_bytes = _model_input_bytes(messages)
+        call_upper = 2 * (input_bytes + settings.observer_step_max_tokens)
+        if (
+            input_bytes > settings.observer_max_prompt_bytes
+            or model_token_upper + call_upper > settings.observer_total_model_tokens
+        ):
+            raise LocalError(503, "observer_budget_exhausted", "项目观察已达到模型预算。")
+        model_token_upper += call_upper
 
         def validate(
             step: ObserverStep, current_partial: bool = partial, finish_only: bool = must_finish
@@ -174,8 +200,12 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
                 messages=messages,
                 output_schema=ObserverStep,
                 prompt_version="observer-v1",
-                retry_policy=RetryPolicy(max_attempts=2, deadline_seconds=min(45, remaining - 2)),
+                retry_policy=RetryPolicy(
+                    max_attempts=2,
+                    deadline_seconds=min(45, remaining - (2 if must_finish else 20)),
+                ),
                 validate_output=validate,
+                max_completion_tokens=settings.observer_step_max_tokens,
             )
         except ModelFailure as exc:
             if exc.code == "dependency_unavailable":
@@ -205,10 +235,18 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
                 first_line=step.first_line,
                 last_line=step.last_line,
             )
-            if total_chars + len(result.text) > settings.observer_total_chars:
+            next_messages = [
+                *messages,
+                Message(role="assistant", content=step.model_dump_json()),
+                Message(role="user", content=f"Tool result for {step.action}: {result.text}"),
+            ]
+            if (
+                total_chars + len(result.text) > settings.observer_total_chars
+                or _model_input_bytes(next_messages) > settings.observer_max_prompt_bytes
+            ):
                 partial = True
                 tool_steps = settings.observer_tool_steps
-                tool_text = '{"truncated":true,"reason":"observer text budget"}'
+                tool_text = '{"truncated":true,"reason":"observer text or context budget"}'
             else:
                 tool_text = result.text
                 total_chars += len(tool_text)

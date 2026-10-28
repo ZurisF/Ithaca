@@ -1,5 +1,6 @@
 import logging
 from typing import Annotated
+from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -13,6 +14,7 @@ from app.api.identity import Identity, get_identity
 from app.api.internal import router as internal_router
 from app.api.prepare import router as prepare_router
 from app.db import engine
+from app.domain.contracts import ModelReadiness
 from app.observability.logging import configure_logging
 from app.settings import get_settings
 
@@ -84,11 +86,19 @@ async def health() -> JSONResponse:
     )
 
 
-@app.get("/v1/model-readiness", responses={503: {"model": ErrorEnvelope}})
-async def model_readiness() -> dict[str, str]:
+@app.get(
+    "/v1/model-readiness",
+    response_model=ModelReadiness,
+    responses={503: {"model": ErrorEnvelope}},
+)
+async def model_readiness() -> ModelReadiness:
     if not settings.model_api_key or not settings.model_name:
         raise AppError(503, "dependency_unavailable", "模型尚未配置。", retryable=False)
-    return {"status": "configured"}
+    return ModelReadiness(
+        status="configured",
+        model=settings.model_name,
+        provider_host=urlparse(settings.model_base_url).hostname or "未知服务",
+    )
 
 
 @app.get("/v1/me")

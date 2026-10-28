@@ -1,6 +1,6 @@
 # Project Interview Lab
 
-基于项目材料的中文模拟面试与复盘。当前仓库按 `DEVELOPMENT_EXECUTION_PLAN.md` 的 Gate 顺序施工；**页面存在不代表面试业务已完成**。以 [施工进度](#施工进度) 为准。
+基于项目材料的中文模拟面试与复盘。当前仓库按 `DEVELOPMENT_EXECUTION_PLAN.md` 的依赖和质量验收门施工；**页面存在不代表面试业务已完成**。以 [施工进度](#施工进度) 为准。
 
 ## 本机要求
 
@@ -41,6 +41,12 @@ curl -H 'X-Dev-User: 00000000-0000-4000-8000-000000000001' http://127.0.0.1:8100
 
 本地 Runtime 的内部接口要求 `.env` 中共享的高熵 desktop token，并且服务只监听 `127.0.0.1`。真实部署必须关闭开发身份，接入经过验证的身份提供者，并替换开发数据库口令。
 
+## 准备流程
+
+在 Web 创建会话后，可以粘贴 Markdown，也可以点击“选择本机目录”。目录选择器由 macOS 上的 Local Runtime 打开；浏览器、Application Runtime 和 PostgreSQL 只接收随机 `source_handle`，不接收真实路径。文件清单会展示跳过原因及脱敏命中的行号和类型。审阅清单后点击“生成项目快照”，Local Runtime 才会把经过过滤的相对路径和必要文件片段发送给 `.env` 中配置的模型渠道。模型请求使用本机现有网络代理设置，Application 与 Local Runtime 的回环通信不经过代理。
+
+目录授权保存在 Local Runtime 进程内，服务重启或授权到期后需重新选择目录。Local Runtime 或模型渠道不可用时，仍可通过 Markdown 导入继续准备。快照内容变化会清空旧方向、范围和计划；没有解析出 Module/Thread 时，须在页面明确确认使用整份 Markdown。
+
 ## 校验
 
 ```sh
@@ -64,6 +70,6 @@ uv run alembic -c services/application/alembic.ini upgrade head
 
 ## 施工进度
 
-具体完成项、验证记录和剩余范围见 [CONSTRUCTION_STATUS.md](CONSTRUCTION_STATUS.md)。当前最后一个完整通过的验收门是 Gate 0。Gate 1 的核心迁移与约束已验证，Gate 2 的 Markdown 准备链路已有公开 HTTP 和 Web 实现；Gate 1、Gate 2 都尚未完整通过。Gate 3～7 尚未开始，实时面试、赛后、策展、删除和完整故障回归不可用于真实项目。
+具体完成项、验证记录和剩余范围见 [CONSTRUCTION_STATUS.md](CONSTRUCTION_STATUS.md)。Gate 1 已通过本机验收。Gate 2 的准备流程代码已实现，但真实模型渠道当前返回 502/503，完整验收仍待渠道恢复后复测。Gate 3～7 尚未开始，实时面试、赛后、策展、删除和完整故障回归不可用于真实项目。
 
 进度按实际通过的验收门更新，不以启动成功或页面存在代替业务完成。产品行为以 `PRODUCT_DEVELOPMENT.md`、`IMPLEMENTATION_DESIGN.md` 为准。

@@ -17,10 +17,18 @@ class Settings(BaseSettings):
         default="https://api.openai.com/v1", validation_alias="APP_MODEL_BASE_URL"
     )
     model_provider: str = Field(default="openai_compatible", validation_alias="APP_MODEL_PROVIDER")
+    inventory_max_items: int = Field(default=2_000, ge=1, le=2_000)
+    max_file_bytes: int = Field(default=256_000, ge=1_024, le=256_000)
     observer_map_files: int = Field(default=120, ge=1, le=500)
     observer_map_chars: int = Field(default=20_000, ge=1_000, le=100_000)
     observer_tool_steps: int = Field(default=10, ge=1, le=30)
     observer_total_chars: int = Field(default=60_000, ge=5_000, le=200_000)
+    observer_search_files: int = Field(default=100, ge=1, le=100)
+    observer_search_matches: int = Field(default=30, ge=1, le=30)
+    observer_tool_chars: int = Field(default=8_000, ge=500, le=8_000)
+    observer_max_prompt_bytes: int = Field(default=180_000, ge=20_000, le=1_000_000)
+    observer_step_max_tokens: int = Field(default=4_096, ge=256, le=16_384)
+    observer_total_model_tokens: int = Field(default=1_200_000, ge=50_000, le=10_000_000)
     observer_timeout_seconds: int = Field(default=180, ge=30, le=600)
 
 

@@ -157,6 +157,7 @@ class SessionView(SessionSummary):
     selected_sections: list[SectionRef]
     has_snapshot: bool
     has_plan: bool
+    source_handle: str | None
     curation_review: bool
     completed_at: datetime | None
 
@@ -165,6 +166,32 @@ class SnapshotView(StrictModel):
     session_id: UUID
     content: str
     sections: list[SectionRef]
+
+
+class RedactionHit(StrictModel):
+    kind: str
+    line: int = Field(ge=1)
+
+
+class SourceFile(StrictModel):
+    relative_path: str
+    kind: str
+    size: int | None
+    encoding: str | None
+    skip_reason: str | None
+    redactions: list[RedactionHit]
+
+
+class SourceInventory(StrictModel):
+    source_handle: str = Field(pattern=r"^[A-Za-z0-9_-]{43}$")
+    files: list[SourceFile]
+    partial: bool
+
+
+class ModelReadiness(StrictModel):
+    status: Literal["configured"]
+    model: str
+    provider_host: str
 
 
 class TurnView(StrictModel):

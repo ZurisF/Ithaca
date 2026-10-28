@@ -73,6 +73,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interviews/{session_id}/source:choose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Choose Source */
+        post: operations["choose_source_v1_interviews__session_id__source_choose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/source/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Source Inventory */
+        get: operations["source_inventory_v1_interviews__session_id__source_inventory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/interviews/{session_id}/snapshot:observe": {
         parameters: {
             query?: never;
@@ -301,6 +335,18 @@ export interface components {
             /** Section Refs */
             section_refs: components["schemas"]["SectionRef"][];
         };
+        /** ModelReadiness */
+        ModelReadiness: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "configured";
+            /** Model */
+            model: string;
+            /** Provider Host */
+            provider_host: string;
+        };
         /** ModelTraceRequest */
         ModelTraceRequest: {
             /**
@@ -343,6 +389,13 @@ export interface components {
             output_tokens?: number | null;
             /** Error Code */
             error_code?: string | null;
+        };
+        /** RedactionHit */
+        RedactionHit: {
+            /** Kind */
+            kind: string;
+            /** Line */
+            line: number;
         };
         /** SectionRef */
         SectionRef: {
@@ -417,6 +470,8 @@ export interface components {
             has_snapshot: boolean;
             /** Has Plan */
             has_plan: boolean;
+            /** Source Handle */
+            source_handle: string | null;
             /** Curation Review */
             curation_review: boolean;
             /** Completed At */
@@ -445,6 +500,30 @@ export interface components {
             content: string;
             /** Sections */
             sections: components["schemas"]["SectionRef"][];
+        };
+        /** SourceFile */
+        SourceFile: {
+            /** Relative Path */
+            relative_path: string;
+            /** Kind */
+            kind: string;
+            /** Size */
+            size: number | null;
+            /** Encoding */
+            encoding: string | null;
+            /** Skip Reason */
+            skip_reason: string | null;
+            /** Redactions */
+            redactions: components["schemas"]["RedactionHit"][];
+        };
+        /** SourceInventory */
+        SourceInventory: {
+            /** Source Handle */
+            source_handle: string;
+            /** Files */
+            files: components["schemas"]["SourceFile"][];
+            /** Partial */
+            partial: boolean;
         };
         /**
          * TerminationReason
@@ -633,6 +712,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SnapshotView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    choose_source_v1_interviews__session_id__source_choose_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceInventory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    source_inventory_v1_interviews__session_id__source_inventory_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceInventory"];
                 };
             };
             /** @description Validation Error */
@@ -939,9 +1084,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["ModelReadiness"];
                 };
             };
             /** @description Service Unavailable */

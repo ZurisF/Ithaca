@@ -23,7 +23,7 @@ async def get_session(
     result = await db.execute(
         text(
             """
-            SELECT s.id, s.status, s.interview_direction, s.selected_sections,
+            SELECT s.id, s.status, s.interview_direction, s.selected_sections, s.source_handle,
                    s.termination_reason, s.curation_review, s.created_at, s.updated_at,
                    s.completed_at,
                    EXISTS (SELECT 1 FROM app.session_snapshots sn WHERE sn.session_id = s.id)
@@ -105,7 +105,7 @@ async def clear_selection_and_plan(db: AsyncSession, session_id: UUID) -> None:
     await db.execute(
         text("""
             UPDATE app.interview_sessions
-            SET selected_sections = '[]'::jsonb, updated_at = now()
+            SET interview_direction = NULL, selected_sections = '[]'::jsonb, updated_at = now()
             WHERE id = :id
         """),
         {"id": session_id},

@@ -28,9 +28,16 @@ class ContentRejected(ValueError):
 
 
 @dataclass(frozen=True)
+class SafetyHit:
+    kind: str
+    line: int
+
+
+@dataclass(frozen=True)
 class SafetyResult:
     text: str
     replacements: int
+    hits: tuple[SafetyHit, ...]
 
     @property
     def changed(self) -> bool:
@@ -44,15 +51,28 @@ def filter_text(raw: str, *, max_chars: int = MAX_SNAPSHOT_CHARS) -> SafetyResul
         raise ContentRejected("too_long")
     if "\x00" in raw or any(ord(char) < 32 and char not in "\n\r\t" for char in raw):
         raise ContentRejected("invalid_control_character")
-    text, count = PRIVATE_KEY.subn(
-        lambda match: "[已移除私钥]" + "\n" * match.group(0).count("\n"), raw
+    hits: list[SafetyHit] = []
+
+    def replace(pattern: re.Pattern[str], text: str, kind: str, replacement) -> str:
+        def apply(match: re.Match[str]) -> str:
+            hits.append(SafetyHit(kind, text.count("\n", 0, match.start()) + 1))
+            return replacement(match)
+
+        return pattern.sub(apply, text)
+
+    text = replace(
+        PRIVATE_KEY,
+        raw,
+        "private_key",
+        lambda match: "[已移除私钥]" + "\n" * match.group(0).count("\n"),
     )
-    text, n = ASSIGNMENT.subn(lambda match: f"{match.group(1)}{match.group(2)}[已脱敏]", text)
-    count += n
-    text, n = BEARER.subn("Bearer [已脱敏]", text)
-    count += n
-    text, n = OPENAI_KEY.subn("[已脱敏密钥]", text)
-    count += n
-    text, n = AWS_KEY.subn("[已脱敏密钥]", text)
-    count += n
-    return SafetyResult(text=text, replacements=count)
+    text = replace(
+        ASSIGNMENT,
+        text,
+        "credential_assignment",
+        lambda match: f"{match.group(1)}{match.group(2)}[已脱敏]",
+    )
+    text = replace(BEARER, text, "bearer_token", lambda _match: "Bearer [已脱敏]")
+    text = replace(OPENAI_KEY, text, "api_key", lambda _match: "[已脱敏密钥]")
+    text = replace(AWS_KEY, text, "aws_key", lambda _match: "[已脱敏密钥]")
+    return SafetyResult(text=text, replacements=len(hits), hits=tuple(hits))

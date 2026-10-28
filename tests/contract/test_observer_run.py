@@ -1,11 +1,13 @@
 """Observer must read real evidence and publish only a validated Markdown snapshot."""
 
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 
 from local_project.errors import LocalError
+from local_project.observer import run as observer_run
 from local_project.observer.run import ObserverStep, observe
 from local_project.settings import get_settings
 
@@ -90,3 +92,49 @@ async def test_map_budget_requires_explicit_partial_coverage(
         with pytest.raises(LocalError) as rejected:
             await observe(root, uuid4(), model)
         assert rejected.value.code == "observer_output_invalid"
+
+
+@pytest.mark.asyncio
+async def test_model_token_budget_forces_partial_finish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "main.py").write_text("def handle(item):\n    return item\n", encoding="utf-8")
+    settings = get_settings()
+    monkeypatch.setattr(settings, "observer_step_max_tokens", 256)
+    monkeypatch.setattr(settings, "observer_total_model_tokens", 18_000)
+
+    class BudgetObserver(ControlledObserver):
+        async def generate_structured(self, **kwargs) -> ObserverStep:
+            if self.calls == 1:
+                assert any("工具预算已到" in message.content for message in kwargs["messages"])
+            assert kwargs["max_completion_tokens"] == 256
+            return await super().generate_structured(**kwargs)
+
+    snapshot = await observe(root, uuid4(), BudgetObserver(partial=True))
+    assert "部分分析" in snapshot
+
+
+@pytest.mark.asyncio
+async def test_time_budget_reserves_a_partial_finish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "main.py").write_text("def handle(item):\n    return item\n", encoding="utf-8")
+    tick = [0.0]
+    monkeypatch.setattr(observer_run, "time", SimpleNamespace(monotonic=lambda: tick[0]))
+    monkeypatch.setattr(get_settings(), "observer_timeout_seconds", 30)
+
+    class TimedObserver(ControlledObserver):
+        async def generate_structured(self, **kwargs) -> ObserverStep:
+            if self.calls == 1:
+                assert any("工具预算已到" in message.content for message in kwargs["messages"])
+            result = await super().generate_structured(**kwargs)
+            if self.calls == 1:
+                tick[0] = 7.0
+            return result
+
+    snapshot = await observe(root, uuid4(), TimedObserver(partial=True))
+    assert "部分分析" in snapshot and "未覆盖" in snapshot

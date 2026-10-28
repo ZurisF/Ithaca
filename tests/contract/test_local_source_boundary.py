@@ -20,6 +20,9 @@ async def test_handle_is_bound_to_one_session_and_exposes_no_absolute_path(tmp_p
     root.mkdir()
     (root / "README.md").write_text("# 项目\n可读材料。\n", encoding="utf-8")
     (root / ".env").write_text("SECRET_CANARY=never_return_this", encoding="utf-8")
+    (root / "config.py").write_text(
+        "# sample\napi_key = 'sk-123456789012345678901234'\n", encoding="utf-8"
+    )
     session_id = uuid4()
     other_session = uuid4()
     headers = {"Authorization": f"Bearer {get_settings().desktop_instance_token}"}
@@ -45,7 +48,12 @@ async def test_handle_is_bound_to_one_session_and_exposes_no_absolute_path(tmp_p
         assert allowed.status_code == 200, allowed.text
         assert str(root) not in allowed.text
         assert "SECRET_CANARY" not in allowed.text
+        assert "sk-123456789012345678901234" not in allowed.text
         assert any(item["relative_path"] == "README.md" for item in allowed.json()["files"])
+        config = next(
+            item for item in allowed.json()["files"] if item["relative_path"] == "config.py"
+        )
+        assert config["redactions"] == [{"kind": "credential_assignment", "line": 2}]
         assert (
             await client.get(
                 inventory_url, headers=headers, params={"session_id": str(other_session)}
@@ -115,3 +123,26 @@ def test_inventory_applies_nested_gitignore_but_cannot_override_hard_excludes(
     assert reasons[".env"] == "sensitive_name"
     assert reasons["src/scratch.tmp"] == "gitignored"
     assert reasons["src/main.py"] is None
+
+
+def test_inventory_skips_nested_repository_and_submodule(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "main.py").write_text("def main(): pass\n", encoding="utf-8")
+    nested = root / "nested"
+    nested.mkdir()
+    (nested / ".git").mkdir()
+    (nested / "private.py").write_text("CANARY_NESTED_REPO\n", encoding="utf-8")
+    submodule = root / "submodule"
+    submodule.mkdir()
+    (submodule / ".git").write_text("gitdir: ../.git/modules/submodule\n", encoding="utf-8")
+    (submodule / "private.py").write_text("CANARY_SUBMODULE\n", encoding="utf-8")
+
+    items, partial = inventory(root)
+    assert not partial
+    reasons = {item.relative_path: item.skip_reason for item in items}
+    assert reasons["main.py"] is None
+    assert reasons["nested"] == "nested_repository"
+    assert reasons["submodule"] == "nested_repository"
+    assert "nested/private.py" not in reasons
+    assert "submodule/private.py" not in reasons

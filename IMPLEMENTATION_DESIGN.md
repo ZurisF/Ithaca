@@ -1304,7 +1304,7 @@ Supervisor Prompt 额外固定以下出题合同：
 
 ### 18.0 专项故障窗口场景库
 
-[`tests/fault_windows/README.md`](tests/fault_windows/README.md) 及其七个专项文件保存外部调用、业务提交与 checkpoint、interrupt、compact 重建、session 竞争、赛后处理屏障和终态安全的可复用场景。它们是实现时按当前纵向切片选取的详细测试 backlog，不是要求明天演示版一次性跑完的独立验收门槛；本章 18.1～18.6 仍是首版测试范围摘要，本文的业务合同仍是行为事实来源。
+[`tests/fault_windows/README.md`](tests/fault_windows/README.md) 及其七个专项文件保存外部调用、业务提交与 checkpoint、interrupt、compact 重建、session 竞争、赛后处理屏障和终态安全的可复用场景。它们在实现时按纵向切片逐项转成自动化测试，完整质量交付前须覆盖所有已确认场景；本章 18.1～18.6 是测试范围摘要，本文的业务合同仍是行为事实来源。
 
 测试默认从正式模块的公开 HTTP/当前视图 seam 建立场景，并使用真实 PostgreSQL、Redis 和两个 Runtime；只有模型供应商、检索、checkpointer 故障点等真实外部依赖使用受控 adapter。直接读取数据库只用于证明约束、事务原子性、清理和无泄漏，不把 repository 调用次序当作业务行为。断言分别记录“物理外部调用次数”和“业务效果次数”：恢复或重试可以再次调用外部依赖，但不能多发布一个 turn、Stage result、snapshot append、赛后结果、报告或结算。
 

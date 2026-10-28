@@ -315,6 +315,124 @@
         }
       }
     },
+    "/v1/interviews/{session_id}/source:choose": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Choose Source",
+        "operationId": "choose_source_v1_interviews__session_id__source_choose_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceInventory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/source/inventory": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Source Inventory",
+        "operationId": "source_inventory_v1_interviews__session_id__source_inventory_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceInventory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/interviews/{session_id}/snapshot:observe": {
       "post": {
         "tags": [
@@ -819,11 +937,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Model Readiness V1 Model Readiness Get"
+                  "$ref": "#/components/schemas/ModelReadiness"
                 }
               }
             }
@@ -1049,6 +1163,31 @@
         ],
         "title": "InterviewStage"
       },
+      "ModelReadiness": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "configured",
+            "title": "Status"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "provider_host": {
+            "type": "string",
+            "title": "Provider Host"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "model",
+          "provider_host"
+        ],
+        "title": "ModelReadiness"
+      },
       "ModelTraceRequest": {
         "properties": {
           "trace_id": {
@@ -1178,6 +1317,26 @@
           "latency_ms"
         ],
         "title": "ModelTraceRequest"
+      },
+      "RedactionHit": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Line"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "line"
+        ],
+        "title": "RedactionHit"
       },
       "SectionRef": {
         "properties": {
@@ -1349,6 +1508,17 @@
             "type": "boolean",
             "title": "Has Plan"
           },
+          "source_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Handle"
+          },
           "curation_review": {
             "type": "boolean",
             "title": "Curation Review"
@@ -1378,6 +1548,7 @@
           "selected_sections",
           "has_snapshot",
           "has_plan",
+          "source_handle",
           "curation_review",
           "completed_at"
         ],
@@ -1454,6 +1625,97 @@
           "sections"
         ],
         "title": "SnapshotView"
+      },
+      "SourceFile": {
+        "properties": {
+          "relative_path": {
+            "type": "string",
+            "title": "Relative Path"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "encoding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encoding"
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason"
+          },
+          "redactions": {
+            "items": {
+              "$ref": "#/components/schemas/RedactionHit"
+            },
+            "type": "array",
+            "title": "Redactions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "relative_path",
+          "kind",
+          "size",
+          "encoding",
+          "skip_reason",
+          "redactions"
+        ],
+        "title": "SourceFile"
+      },
+      "SourceInventory": {
+        "properties": {
+          "source_handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "title": "Source Handle"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/SourceFile"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "partial": {
+            "type": "boolean",
+            "title": "Partial"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_handle",
+          "files",
+          "partial"
+        ],
+        "title": "SourceInventory"
       },
       "TerminationReason": {
         "type": "string",

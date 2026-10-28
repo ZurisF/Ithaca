@@ -10,6 +10,8 @@ type Snapshot = components["schemas"]["SnapshotView"];
 type Plan = components["schemas"]["InterviewPlan"];
 type Section = components["schemas"]["SectionRef"];
 type Direction = components["schemas"]["Direction"];
+type SourceInventory = components["schemas"]["SourceInventory"];
+type ModelReadiness = components["schemas"]["ModelReadiness"];
 
 const headers = { "X-Dev-User": process.env.NEXT_PUBLIC_DEV_USER_ID ?? "00000000-0000-4000-8000-000000000001" };
 const directions: Record<Direction, string> = {
@@ -30,6 +32,8 @@ export default function Home() {
   const [sessions, setSessions] = useState<Summary[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [sourceInventory, setSourceInventory] = useState<SourceInventory | null>(null);
+  const [modelReadiness, setModelReadiness] = useState<ModelReadiness | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [markdown, setMarkdown] = useState("");
   const [opinion, setOpinion] = useState("");
@@ -39,6 +43,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const pendingOpinionKey = useRef<string | null>(null);
+  const pendingObserveKey = useRef<string | null>(null);
 
   const loadSession = useCallback(async (id: string) => {
     const current = await api.GET("/v1/interviews/{session_id}", { params: { path: { session_id: id } }, headers });
@@ -46,6 +51,13 @@ export default function Home() {
     setSession(current.data);
     setDirection(current.data.interview_direction ?? "project_overview");
     setSelected(current.data.selected_sections);
+    if (current.data.source_handle) {
+      const inventory = await api.GET("/v1/interviews/{session_id}/source/inventory", {
+        params: { path: { session_id: id } }, headers,
+      });
+      if (inventory.data) setSourceInventory(inventory.data);
+      else { setSourceInventory(null); setError(errorMessage(inventory.error)); }
+    } else setSourceInventory(null);
     if (current.data.has_snapshot) {
       const response = await api.POST("/v1/interviews/{session_id}/snapshot:parse-ranges", { params: { path: { session_id: id } }, headers });
       if (!response.data) throw new Error(errorMessage(response.error));
@@ -68,6 +80,8 @@ export default function Home() {
         if (!response.data) throw new Error(errorMessage(response.error));
         if (cancelled) return;
         setSessions(response.data);
+        const readiness = await api.GET("/v1/model-readiness");
+        if (!cancelled) setModelReadiness(readiness.data ?? null);
         const id = new URLSearchParams(window.location.search).get("session");
         if (id) await loadSession(id);
       } catch (cause) { if (!cancelled) setError(cause instanceof Error ? cause.message : "无法读取会话。"); }
@@ -116,6 +130,46 @@ export default function Home() {
     {session && <>
       <section className="panel" aria-labelledby="snapshot-title">
         <p className="step">02 / SNAPSHOT</p><h2 id="snapshot-title">项目快照</h2>
+        <div className="source-box">
+          <h3>从本机目录观察</h3>
+          <p className="muted">选择器只在本机运行。服务器和数据库只接收目录授权标识；模型只会收到经过过滤的相对路径和必要文件片段。</p>
+          <div className="actions"><button disabled={busy || session.status !== "preparing"}
+            onClick={() => void run(async () => {
+              const response = await api.POST("/v1/interviews/{session_id}/source:choose", {
+                params: { path: { session_id: session.id } }, headers,
+              });
+              if (!response.data) throw new Error(errorMessage(response.error));
+              pendingObserveKey.current = null;
+              setSourceInventory(response.data);
+              await loadSession(session.id);
+            })}>{sourceInventory ? "重新选择目录" : "选择本机目录"}</button></div>
+          {sourceInventory && <>
+            <p className="muted">已清点 {sourceInventory.files.length} 项{sourceInventory.partial ? "；目录清点达到预算，仅覆盖部分内容" : ""}。请先检查清单，再生成快照。</p>
+            <details><summary>查看文件、跳过原因与脱敏位置</summary>
+              <ul className="inventory-list">{sourceInventory.files.map(item => <li key={item.relative_path}>
+                <span>{item.relative_path}</span>
+                {item.skip_reason && <small>跳过：{item.skip_reason}</small>}
+                {item.redactions.map((hit, index) => <small key={`${hit.line}:${hit.kind}:${index}`}>
+                  第 {hit.line} 行 · {hit.kind} 已脱敏
+                </small>)}
+              </li>)}</ul>
+            </details>
+            <p className="muted">{modelReadiness
+              ? `点击生成后，已过滤的项目片段将发送到 ${modelReadiness.provider_host}，由 ${modelReadiness.model} 分析；真实目录路径不会发送。`
+              : "当前模型尚未配置，目录清单可查看，观察生成暂不可用。"}</p>
+            <div className="actions"><button disabled={busy || session.status !== "preparing" || !modelReadiness}
+              onClick={() => void run(async () => {
+                pendingObserveKey.current ??= crypto.randomUUID();
+                const response = await api.POST("/v1/interviews/{session_id}/snapshot:observe", {
+                  params: { path: { session_id: session.id }, header: { "Idempotency-Key": pendingObserveKey.current } },
+                  headers, body: { source_handle: sourceInventory.source_handle },
+                });
+                if (!response.data) throw new Error(errorMessage(response.error));
+                pendingObserveKey.current = null;
+                await loadSession(session.id);
+              })}>{busy ? "观察中…" : "生成项目快照"}</button></div>
+          </>}
+        </div>
         <p className="muted">粘贴项目 Markdown。写入前会执行敏感内容过滤；内容变化会清空原有范围和计划。</p>
         <label htmlFor="markdown">Markdown 材料</label>
         <textarea id="markdown" rows={12} maxLength={200000} value={markdown}
@@ -185,6 +239,6 @@ export default function Home() {
         </li>)}</ol> : <p className="muted">模型未配置时，生成请求会显示明确错误。</p>}
       </section>}
     </>}
-    <footer>施工进度：Markdown 准备流程可操作；目录观察、实时面试和赛后功能仍在开发。</footer>
+    <footer>施工进度：准备流程持续验收；实时面试和赛后功能仍在开发。</footer>
   </main>;
 }

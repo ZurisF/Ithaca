@@ -1,16 +1,16 @@
-# Project Interview Lab 今夜开发施工项目书
+# Project Interview Lab 完整质量交付施工书
 
-> 目标：从空代码仓库施工出明天可以提交和现场演示的产品版本。  
+> 目标：按可验证的工程步骤交付完整、可靠、可实际使用的产品。交付时间由完成情况和质量证据决定。
 > 上游产品合同：[`PRODUCT_DEVELOPMENT.md`](PRODUCT_DEVELOPMENT.md)  
 > 工程合同：[`IMPLEMENTATION_DESIGN.md`](IMPLEMENTATION_DESIGN.md)  
 > 故障场景库：[`tests/fault_windows/README.md`](tests/fault_windows/README.md)  
-> 本文只决定施工顺序、每道验收门、实现校验和本轮边界；如有冲突，以上游文档为准。
+> 本文决定施工依赖、每道验收门、实现校验和完整交付边界；如有冲突，以上游文档为准。Gate 是质量核验点，不是发布日期或功能缩水的依据。
 
-> **核心施工原则：功能不减，机制不增。** 已确定的产品行为必须完整实现；实现它们时，只采用能够证明必要的最小机制，不把一次性交付扩建成通用平台。
+> **核心施工原则：功能不减，质量不降，机制不增。** 已确定的产品行为必须完整实现并通过相应验证；实现它们时，只采用能够证明必要的最小机制，不把产品扩建成通用平台。
 
-## 1. 今夜交付结果
+## 1. 完整交付结果
 
-明天打开产品后，必须能用一场真实 session 连续演示：
+完整交付时，用户必须能用真实 session 完成以下用户与管理流程；每一步还须通过对应的异常、恢复、安全和权限验收：
 
 1. 创建 session。
 2. 授权一个本地项目目录并生成 snapshot；Local Runtime 不可用时也能导入已有 Markdown 完成同一路径。
@@ -20,18 +20,18 @@
 6. 刷新浏览器或重启 Application Runtime 后，当前问题和已有问答仍可恢复。
 7. 提前完成或正常结束后进入赛后处理，显示完整问答、逐题反馈和报告；部分参考答案失败时明确展示缺失，不伪造成功。
 8. 导出当前 snapshot、完整问答 Markdown 和报告 Markdown。
-9. 能展示至少一个真实工程保证：重复提交同一回答不会生成第二题，或 turn 已提交但 SSE 丢失时刷新仍能读到该题。
+9. 重复提交同一回答不会生成第二题；turn 已提交但 SSE 丢失时，刷新仍能读到该题。两项都须验证。
 10. 对题目提交好评/差评；进入终态后反馈冻结并正确结算题库统计。
 11. Supervisor 提出项目事实更正时显示可编辑确认卡，确认或拒绝后继续同一个决策，不发生第二次 Supervisor 调用。
 12. User 授权一场终态 session 进入策展池，Administrator 编辑并人工确认加入唯一题库；撤销授权后私人材料不再可读。
 
-这条链路必须使用正式 PostgreSQL 业务表、Redis checkpoint、两个 FastAPI Runtime 和正式 Web 页面。允许模型和检索外部依赖在测试中换成受控 adapter，不允许把业务事实临时放在进程内字典里冒充完成。
+这条链路必须使用正式 PostgreSQL 业务表、Redis checkpoint、两个 FastAPI Runtime 和正式 Web 页面。受控 adapter 用于故障注入和确定性测试；真实模型、真实检索与跨 Runtime 路径也须在固定材料上回放验证。测试通过与页面可操作都不能单独代表产品完成。
 
-正常完成、提前完成、确认强退、安全上限、删除 session 和断线/重启恢复是同一交付范围内的不同验收路径，不要求塞进同一次现场演示，但都必须实现和验证。
+正常完成、提前完成、确认强退、安全上限、删除 session 和断线/重启恢复是同一交付范围内的不同验收路径，分别验证并记录证据。策展与删除也须完成独立的端到端验收。
 
 ## 2. 施工范围总则
 
-`PRODUCT_DEVELOPMENT.md` 和 `IMPLEMENTATION_DESIGN.md` 已经明确写入的产品行为、数据合同、恢复语义、安全要求和测试要求，默认全部属于本次施工范围。文档中的“首版”“Phase 0/1”“MVP”标签不在本文中被解释为可以删功能；只有上游明确标为后续、扩展或非目标的内容才不实现。
+`PRODUCT_DEVELOPMENT.md` 和 `IMPLEMENTATION_DESIGN.md` 已经明确写入的首个完整版本的产品行为、数据合同、恢复语义、安全要求和测试要求，属于本次施工范围。只有上游明确标为后续、扩展或非目标的内容才不实现。部分 Gate 通过仅表示对应范围已验收，不能宣称完整交付。
 
 完整范围不等于最大化机制数量。本文要求实现全部既定能力，但不要求为每项能力各建一套抽象、状态机、持久化副本或扩展框架。一个业务不变量只保留一套权威实现；能由数据库约束、短事务、条件写入或现有 module 内部逻辑解决的问题，不升级为新的平台能力。
 
@@ -52,7 +52,7 @@
 - 用户与管理员 Web、SSE 重读策略、结果页、雷达图和三个导出入口。
 - 无内容 trace、固定回归、检索评估以及测试设计要求的自动化覆盖。
 
-### 2.2 主链路通过后施工的必做内容
+### 2.2 依赖主链路、仍须完成的内容
 
 - 快照事实更正确认卡的完整编辑体验。
 - 20-turn compact 的真实长对话回放、checkpoint 丢失重建和边界测试。
@@ -61,7 +61,7 @@
 - 八维雷达图、三级标签、固定评分说明、空状态、错误状态和必要的响应式布局。
 - 全部故障窗口自动化、RAGAS 离线评估和 P95/P99 参数调优。
 
-这里的“主链路通过后”只表示依赖顺序，不表示可选、锦上添花或有时间才做。任何未完成项都必须如实保留为施工未完成，不能通过改名为扩展功能来收缩范围。
+这里的先后只表示技术依赖，不表示可选。任何未完成项都必须如实保留为施工未完成，不能通过改名为扩展功能来收缩范围。
 
 ### 2.3 上游明确排除或后续扩展的内容
 
@@ -78,16 +78,18 @@
 
 ### 3.1 纵向切片优先
 
-每个 Gate 必须形成从公开 HTTP interface 到可观察结果的完整切片。不要先写完所有 repository、再写所有 Graph、最后才第一次联调 Web。
+业务 Gate 应形成从公开 HTTP interface 到可观察结果的完整切片；Gate 0～1 验收启动条件与存储基础。不要先写完所有 repository、再写所有 Graph、最后才第一次联调 Web。
 
-每个 Gate 的顺序固定为：
+每个切片的施工与验收顺序为：
 
 1. 固定 interface 和错误合同。
-2. 写最小失败测试或验收脚本。
+2. 写覆盖该切片主要行为和失败条件的测试或验收脚本。
 3. 实现正式业务路径。
 4. 通过该 Gate 的自动化校验。
 5. 从 Web 或公开 HTTP 手动走一遍。
-6. 才进入下一个 Gate。
+6. 记录通过证据和未覆盖范围，再按依赖推进后续切片。
+
+尚未通过的 Gate 保持未通过；后续切片可以先开展不依赖未完成项的工作，但不得以它的进度替代前置验收。完整交付需所有适用 Gate 和跨 Gate 回归通过。
 
 ### 3.2 Module 必须有深度
 
@@ -178,17 +180,16 @@
 
 ## 5. Gate 1：合同、迁移与存储不变量
 
-### 5.1 先固定的合同
+### 5.1 按使用点固定合同
 
-按 `IMPLEMENTATION_DESIGN.md` 建立：
+按 `IMPLEMENTATION_DESIGN.md` 建立稳定合同。Gate 1 固定基础枚举、存储模型、通用错误 envelope，以及准备流程实际使用的 `SectionRef`、`InterviewStage`、`InterviewPlan` 和 `SessionView`。后续合同在对应 Gate 的公开接口与测试之前固定，不能以临时字典或未校验模型文本绕过：
 
-- Session 状态、结束原因、方向、Stage action、反馈和赛后 task 枚举。
-- `SectionRef`、`InterviewStage`、`InterviewPlan`。
-- Supervisor、项目版答案、理想版答案、逐题评估和报告 Pydantic 输出。
-- 通用错误 envelope 和稳定 error code。
-- Web 使用的 `SessionView`、`InterviewView`、`ResultView`；不直接暴露 ORM model。
-- 共享 Model Adapter 的 structured/tool-step interface、统一 RetryPolicy 和无内容 TraceSink；Prompt、工具执行、路径解析和 repository 不进入 adapter。
-- 版本化 Prompt、JSON Schema、Topic、五类 planning template 与 planning policy 资产及其 manifest。
+- Gate 2：Planner Pydantic/JSON Schema、共享 Model Adapter 的 structured/tool-step interface、统一 RetryPolicy 和无内容 TraceSink，以及版本化 Prompt、Topic、五类 planning template、planning policy 和 manifest。Prompt、工具执行、路径解析和 repository 不进入 adapter。
+- Gate 3～4：Supervisor Pydantic 输出与 `InterviewView`；Stage action、反馈及面试错误码在使用前固定。
+- Gate 5：项目版答案、理想版答案、逐题评估、报告和 post task 的合同，以及 `ResultView`。
+- Gate 7：策展与删除的请求、响应和权限合同。
+
+Web 只消费相应 Gate 已生成的 OpenAPI client，不直接暴露 ORM model。
 
 ### 5.2 迁移
 
@@ -203,26 +204,23 @@
 
 只实现业务 module 当前需要的 repository 方法。不要为每张表生成一套通用 CRUD interface。
 
-事务由业务 module 开启，repository 接收同一 transaction/session。首批必须有：
+事务由业务 module 开启，repository 接收同一 transaction/session。Gate 1 只需建立当前准备流程实际使用的 session 创建、owner 读取、snapshot 读取/覆盖/幂等追加、plan 保存/读取及其事务 seam。其余方法随对应业务 Gate 实现并验收，不以空方法或通用 CRUD 提前占位：
 
-- session 创建、owner 读取、条件状态变更；
-- 当前 snapshot 读取/覆盖/幂等追加；
-- plan 保存和读取；
-- 当前 turn 读取、首次回答和条件发布下一题；
-- Stage result 条件插入；
-- post task/产物同事务发布；
-- question settlement 原子提交。
+- Gate 3：开始面试的条件状态变更、当前 turn 读取和首题条件发布。
+- Gate 4：首次回答、后续题目条件发布和 Stage result 条件插入。
+- Gate 5：post task/产物同事务发布及 question settlement 原子提交。
+- Gate 7：策展授权竞争、删除和清理所需事务方法。
 
 ### 5.4 验收门
 
 - migration upgrade 从空库成功，downgrade/upgrade 至少走通一次。
 - 数据库直接拒绝非法 session 状态组合、turn 101、第二个未回答 turn和错配的 `answer/answered_at`。
-- 同一自然键重复发布不会形成两条业务记录。
-- Pydantic 合同能生成 OpenAPI，Web client 可以生成或编译。
+- 本 Gate 已实现的自然键重复发布不会形成两条业务记录；后续自然键在使用它们的 Gate 验收。
+- 本 Gate 已使用的 Pydantic 合同能生成 OpenAPI，Web client 可以生成或编译。
 
 ## 6. Gate 2：准备流程纵向链路
 
-### 6.1 最短可用链路
+### 6.1 准备流程基本链路
 
 ```text
 POST session
@@ -529,21 +527,19 @@ Finalization Graph 是依赖关系的唯一编排者；`post_tasks` 只记录稳
 - 评估全部成功后才生成报告；报告输入捕获中没有两版参考答案。
 - 三个 Markdown 导出与当前 PostgreSQL 事实一致。
 - 反馈 PUT 与终止冻结并发时，只有先取得 session 行锁的一方生效。
-- 强退分别与回答、提前完成和迟到模型结果竞争，最终状态和已发布业务事实符合 6.5 合同。
+- 强退分别与回答、提前完成和迟到模型结果竞争，最终状态和已发布业务事实符合 `IMPLEMENTATION_DESIGN.md` 第 6.5 节的强制退出竞争合同。
 - post task 在领取后、外部调用后、产物发布前分别中断，恢复后每个业务产物仍至多一份。
 
-## 10. Gate 6：Web 演示闭环
+## 10. Gate 6：用户 Web 全链路
 
 ### 10.1 页面集合
 
-- Session 列表/创建/删除，以及 owner 的策展授权开关。
+- Session 列表与创建；删除及策展授权入口在 Gate 7 验收。
 - 项目授权或 Markdown 导入、snapshot 审阅。
 - 方向、范围和 plan 确认。
 - 面试页面：Stage 进度、当前问题、回答、反馈、提前完成、处理状态。
 - 快照事实更正确认卡、decision retry 和确认强退交互。
 - 结果页面：复盘报告/完整问答两个页签、三个导出入口。
-- Administrator 页面：已授权材料筛选、策展 item 编辑审核、隐私/查重结果和人工加入题库。
-- 题库管理列表：公共题目字段及 usage/upvote/downvote，不反查私人 session。
 - 明确的错误和重试页面；不能只在 console 打印。
 
 ### 10.2 Web 状态规则
@@ -552,38 +548,38 @@ Finalization Graph 是依赖关系的唯一编排者；`post_tasks` 只记录稳
 - 页面加载先 GET，SSE 只令相关 query 失效并重取。
 - 提交按钮防双击是体验优化，后端幂等仍独立成立。
 - 强制退出只有二次确认后的确认按钮调用后端；取消不发请求。
-- 删除 session 同样需要明确确认并展示可重试清理失败，不能先从 UI 隐藏仍未删除的资源。
 - 模型处理中明确显示状态；不能用前端假问题或假报告填充等待时间。
 - `operation_in_progress`、`decision_retry`、部分赛后失败有可理解的界面文案。
 
-### 10.3 固定演示脚本
+### 10.3 固定用户旅程回归
 
-在一个冻结的小型真实项目上预演并记录：
+在冻结的项目材料上通过浏览器重复运行并记录：
 
-1. 授权目录，展示 Application Runtime 只收到 handle。
+1. 授权目录，并核验 Application Runtime 只收到 handle。
 2. 生成 snapshot，查看一次脱敏结果。
 3. 选择一个 Thread 和 `core_flow_deep_dive`，生成 Stage plan。
 4. 开始面试，回答两到三题；至少触发一次继续追问和一次 Stage 切换。
 5. 刷新页面，证明当前状态恢复。
 6. 提前完成，观察赛后任务进度。
 7. 打开报告和完整问答，导出 Markdown。
-8. 展示一次重复回答或 SSE 丢失测试。
-9. 另开一场终态 session 授权策展，由 Administrator 编辑并确认加入题库，再验证检索链路可见。
+8. 分别验证重复回答和 SSE 丢失后重读。
 
-演示数据不得包含真实凭据或不愿上传给模型的私人代码。
+固定回归材料不得包含真实凭据或不愿上传给模型的私人代码。浏览器旅程与受控故障测试相互补充，不以一次顺利走通代替异常分支验收。
 
 ### 10.4 验收门
 
-- 从空浏览器状态可以独立完成上述脚本，无需手改数据库或调用隐藏脚本推进状态。
+- 从空浏览器状态可以独立完成上述用户旅程，无需手改数据库或调用隐藏脚本推进状态。
 - 刷新、返回列表再进入、Application Runtime 重启后都能回到当前资源。
 - 浏览器网络面板中没有真实路径、题库内部 ID、Prompt、参考答案泄漏到 Supervisor 请求或非 owner 资源。
 - 雷达图显示八维形状和三级标签，但不显示内部数字或聚合总分，并包含固定“评分仅供参考”说明。
-- User 和 Administrator 两种身份只能看到合同允许的资源，管理员角色本身不能绕过 `curation_review`。
+- User 只能看到自己有权访问的资源；Administrator 的策展可见性与 `curation_review` 隔离在 Gate 7 完整验收。
 
-## 11. Gate 7：策展、删除、回归与硬化
+## 11. Gate 7：策展、删除与完整质量回归
 
 ### 11.1 策展授权与人工入库
 
+- [ ] User Web 提供 owner 的策展授权与撤销入口；Administrator Web 提供已授权材料筛选、策展 item 编辑审核、隐私/查重结果和人工入库。
+- [ ] 题库管理列表展示公共题目字段及 usage/upvote/downvote，不反查私人 session。
 - [ ] owner 可以 grant/revoke `curation_review`，其他 User 不能修改。
 - [ ] 管理员列表在 SQL 层只读取 `curation_review=true` 且 `completed/aborted` 的 session；进行中会话即使授权也不可见。
 - [ ] 管理员主动选择源 turn 后才创建 curation item，组合外键不能跨 session 串 turn。
@@ -595,6 +591,7 @@ Finalization Graph 是依赖关系的唯一编排者；`post_tasks` 只记录稳
 
 ### 11.2 删除与保留
 
+- [ ] Session 列表提供删除入口，用户明确确认后才发请求；清理失败时保留可重试的资源和错误状态。
 - [ ] 删除前验证 owner，并停止该 session 的新命令和可取消 worker。
 - [ ] Redis checkpoint 明确删除失败且 PG session 仍存在时，返回可重试错误，不先销毁恢复定位。
 - [ ] PostgreSQL 删除级联清理 snapshot、plan、turn、反馈、赛后产物、settlement、curation 私有引用和 session trace。
@@ -608,6 +605,7 @@ Finalization Graph 是依赖关系的唯一编排者；`post_tasks` 只记录稳
 
 - [ ] 冻结至少三个项目：文档完善、只有代码、用户口述/Markdown 补充。
 - [ ] 保存预期 snapshot、范围、plan 特征和对话行为，不保存私人凭据。
+- [ ] 固定项目用于可重复回归；另为产品文档中的事实引用有效率、相关问题比例、重复率、失败恢复率等数值门槛建立质量评估协议与标注/故障样本。运行验收前在仓库固定样本清单、样本量、统计分母、人工评审规则、无效样本处理和通过条件；样本不足或未评审时标记“未验证”，不得宣称达标。
 - [ ] Observer/Planner/Supervisor/答案/评估/报告分别有真实模型回放入口。
 - [ ] 检索固定查询集计算 Recall@K、nDCG@K、重复率、人工适配率和 RAGAS；RAGAS 不进入在线链路。
 - [ ] Prompt 注入覆盖 README、代码注释、Markdown、回答和工具结果，验证它们只能作为数据。
@@ -616,14 +614,16 @@ Finalization Graph 是依赖关系的唯一编排者；`post_tasks` 只记录稳
 ### 11.4 验收门
 
 - curation grant/read/create/publish/revoke 全链路与并发负例通过。
+- 从空浏览器状态完成策展授权、管理员人工入库、撤销授权与删除；User/Administrator 只能看到合同允许的资源。
 - 删除一个 active、一个 completed、一个已策展 session，各存储和保留行为符合合同。
 - 三个固定项目的端到端回放可重复运行并产出比较结果。
-- 无内容 trace、日志、Redis、导出和 provider capture 通过 canary 泄漏扫描。
+- 按预先固定的样本和口径计算产品质量门槛，记录原始计数、人工评审结果与未达标项；未达标则继续修复和复测。
+- 无内容 trace、日志、Redis、导出和 provider capture 按数据来源与授权出口的允许范围通过 canary 泄漏扫描。
 - `tests/fault_windows` 七个家族都映射到自动化用例或明确的跨进程测试；不能通过改成扩展项来关闭未完成场景。
 
 ## 12. 完整自动化测试计划
 
-测试随 Gate 逐步落地，不在最后一次性补。以下首批用例是主链路进入下一 Gate 的阻塞项；`IMPLEMENTATION_DESIGN.md` 第 18 节及 `tests/fault_windows` 的全部已确认场景继续属于完整施工范围，后续按七个家族补齐。尚未自动化的场景只能标记为未完成，不能被重分类为非目标。
+测试随 Gate 逐步落地。以下用例按其对应的业务 Gate 验收；`IMPLEMENTATION_DESIGN.md` 第 18 节及 `tests/fault_windows` 的全部已确认场景属于完整施工范围，后续按七个家族补齐。尚未自动化的场景只能标记为未完成，不能被重分类为非目标。
 
 ### 12.1 纯规则测试
 
@@ -731,7 +731,7 @@ create → import → select → plan → start
 
 - Application Runtime 直接读取项目路径。
 - 用 Redis、Web state 或进程内字典替代 PostgreSQL 业务事实。
-- 为演示预写固定问题、固定报告或成功 task 记录。
+- 为走通用户旅程预写固定问题、固定报告或成功 task 记录。
 - 跳过 Pydantic/JSON Schema 后直接采用模型文本。
 - 为了让统计好看，把改写题相似度匹配到题库。
 - 在 Graph node、业务 module、SDK 三层同时重试。
@@ -749,12 +749,12 @@ create → import → select → plan → start
 - [ ] migration 可以在空库运行。
 - [ ] 题库 importer 可重复运行。
 - [ ] Web、两个 Runtime、worker、PostgreSQL 和 Redis 的启动关系清楚。
-- [ ] 固定演示项目和演示步骤不依赖个人机器绝对路径。
+- [ ] 固定回归项目和浏览器用户旅程不依赖个人机器绝对路径。
 - [ ] 对照目标工程结构审计新增表、字段、状态、module、adapter、后台循环和配置项；每一项都能指向当前合同与验收，没有“以后可能需要”的空扩展点。
 
 ### 16.2 行为
 
-- [ ] 固定演示脚本完整通过。
+- [ ] 固定用户旅程、独立异常路径和跨 Gate 回归完整通过。
 - [ ] 重复回答、SSE 丢失和一次进程重启通过。
 - [ ] 部分赛后失败的展示不伪造完整成功。
 - [ ] `question_id` 关联只来自本轮精确候选。
@@ -766,20 +766,20 @@ create → import → select → plan → start
 
 - [ ] Application 数据库、日志和错误中无真实路径。
 - [ ] trace 无 Prompt、snapshot、answer 和模型正文。
-- [ ] 测试凭据 canary 不进入模型请求、Redis、trace 或导出。
+- [ ] 项目材料中的测试凭据 canary 不进入模型请求、Redis、trace 或导出；用户主动输入的原始回答可保留在本人业务历史和导出中，但不得进入模型请求、Redis 或 trace。泄漏扫描按来源与授权出口分别断言。
 - [ ] owner、Administrator 和 curation grant 检查各有负例。
 - [ ] 所有文件工具只读且打开时复验根目录。
 
 ### 16.4 停工标准
 
-满足以下条件即可冻结本次完整交付，不继续增加架构：
+满足以下条件才可宣布首个完整版本交付，并冻结本轮范围：
 
-- 纵向主链路和固定演示脚本通过；
+- 纵向主链路、固定用户旅程和独立异常路径通过；
 - 上游正式设计中的全部功能通过各自 Gate，只有明确后续/扩展项未实现；
 - 完整自动化测试计划通过，跨进程慢测可单独运行但不能缺失；
 - 已知失败都能明确降级或显示，不会产生错误业务事实；
 - README 足以让另一台机器启动；
-- 固定回归、检索指标、trace 与安全检查均有结果记录。
+- 固定回归、产品质量门槛、检索指标、trace 与安全检查均有可复核结果，未达标项已经修复并复测。
 - 防过度实现审查通过：不存在第二份业务事实、重复重试层、从单一场景泛化出的通用机制、无调用方抽象或未经实测的性能基础设施。
 
-若时间不足，停在最后一个真实通过的 Gate，并如实记录后续 Gate 未完成；不削功能、不改变上游范围，也不以“展示版/MVP/Phase”名义宣布完整交付。可以调整施工顺序和界面精细度，但产品要求的页面、状态、权限和行为仍必须补齐后才达到本项目停工标准。
+任一 Gate 未通过或质量证据不足时，继续按依赖施工并如实记录未完成项，不改变上游范围，也不提前宣布完整交付。可以调整施工顺序和界面精细度；产品要求的页面、状态、权限、行为和质量门槛均须满足本节条件。

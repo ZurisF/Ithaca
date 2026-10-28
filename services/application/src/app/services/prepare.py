@@ -6,11 +6,19 @@ import re
 from uuid import UUID, uuid4
 
 import httpx
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.api.identity import Identity
-from app.domain.contracts import Direction, SectionRef, SessionSummary, SessionView, SnapshotView
+from app.domain.contracts import (
+    Direction,
+    SectionRef,
+    SessionSummary,
+    SessionView,
+    SnapshotView,
+    SourceInventory,
+)
 from app.domain.rules import parse_sections
 from app.repositories import prepare as repo
 from app.settings import get_settings
@@ -110,6 +118,85 @@ async def _verify_source_handle(session_id: UUID, source_handle: str) -> None:
         raise AppError(503, "dependency_unavailable", "本地目录授权无法验证。", True)
 
 
+async def choose_source(db: AsyncSession, identity: Identity, session_id: UUID) -> SourceInventory:
+    async with db.begin():
+        row = await _owned_session(db, session_id, identity, lock=False)
+        _require_preparing(row)
+    settings = get_settings()
+    if not settings.desktop_instance_token:
+        raise AppError(503, "dependency_unavailable", "本地目录服务尚未配置。")
+    headers = {"Authorization": f"Bearer {settings.desktop_instance_token}"}
+    try:
+        async with httpx.AsyncClient(timeout=190, trust_env=False) as client:
+            response = await client.post(
+                f"{settings.local_runtime_url}/v1/sources:choose",
+                headers=headers,
+                json={"session_id": str(session_id)},
+            )
+    except httpx.RequestError as exc:
+        raise AppError(503, "dependency_unavailable", "本地目录选择器暂时不可用。", True) from exc
+    if response.status_code == 409:
+        raise AppError(409, "source_picker_cancelled", "未选择目录。")
+    if response.status_code != 200:
+        raise AppError(503, "source_picker_failed", "目录选择未能完成。", True)
+    try:
+        chosen = SourceInventory.model_validate(response.json())
+    except (ValueError, ValidationError) as exc:
+        raise AppError(503, "source_picker_failed", "目录选择返回无效。") from exc
+    try:
+        async with db.begin():
+            row = await _owned_session(db, session_id, identity, lock=True)
+            _require_preparing(row)
+            previous = row["source_handle"]
+            await repo.set_source_handle(db, session_id, chosen.source_handle)
+    except Exception:
+        await _release_source(session_id, chosen.source_handle)
+        raise
+    if previous and previous != chosen.source_handle:
+        await _release_source(session_id, previous)
+    return chosen
+
+
+async def _release_source(session_id: UUID, handle: str) -> None:
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+            await client.delete(
+                f"{settings.local_runtime_url}/v1/sources/{handle}",
+                params={"session_id": str(session_id)},
+                headers={"Authorization": f"Bearer {settings.desktop_instance_token}"},
+            )
+    except httpx.RequestError:
+        pass  # The short-lived Local registry expires the grant.
+
+
+async def source_inventory(
+    db: AsyncSession, identity: Identity, session_id: UUID
+) -> SourceInventory:
+    row = await _owned_session(db, session_id, identity, lock=False)
+    handle = row["source_handle"]
+    if not handle:
+        raise AppError(409, "source_not_selected", "请先选择项目目录。")
+    settings = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=10, trust_env=False) as client:
+            response = await client.get(
+                f"{settings.local_runtime_url}/v1/sources/{handle}/inventory",
+                params={"session_id": str(session_id)},
+                headers={"Authorization": f"Bearer {settings.desktop_instance_token}"},
+            )
+    except httpx.RequestError as exc:
+        raise AppError(503, "dependency_unavailable", "本地目录服务暂时不可用。", True) from exc
+    if response.status_code == 404:
+        raise AppError(409, "source_expired", "目录授权已过期，请重新选择。")
+    if response.status_code != 200:
+        raise AppError(503, "dependency_unavailable", "目录清单暂时不可用。", True)
+    try:
+        return SourceInventory.model_validate({**response.json(), "source_handle": handle})
+    except (ValueError, ValidationError) as exc:
+        raise AppError(503, "source_inventory_invalid", "目录清单返回无效。") from exc
+
+
 async def observe_source(
     db: AsyncSession, identity: Identity, session_id: UUID, source_handle: str, operation_id: UUID
 ) -> SnapshotView:
@@ -133,15 +220,20 @@ async def observe_source(
     if response.status_code == 404:
         raise AppError(403, "forbidden", "目录授权不属于当前会话或已失效。")
     if response.status_code != 200:
-        code = (
-            response.json().get("error", {}).get("code")
-            if response.headers.get("content-type", "").startswith("application/json")
-            else None
-        )
+        try:
+            error = response.json().get("error", {})
+            code = error.get("code") if isinstance(error, dict) else None
+        except (ValueError, AttributeError):
+            code = None
         if code == "dependency_unavailable":
             raise AppError(503, "dependency_unavailable", "模型尚未配置。")
         raise AppError(503, "observer_failed", "目录观察未能完成。", True)
-    payload = response.json()
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise AppError(503, "observer_failed", "目录观察返回无效。") from exc
+    if not isinstance(payload, dict):
+        raise AppError(503, "observer_failed", "目录观察返回无效。")
     if payload.get("operation_id") != str(operation_id) or not isinstance(
         payload.get("snapshot"), str
     ):

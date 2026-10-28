@@ -52,12 +52,14 @@ async def test_retry_and_trace_do_not_store_content() -> None:
             output_schema=Output,
             prompt_version="v1",
             retry_policy=RetryPolicy(max_attempts=2, base_delay_seconds=0),
+            max_completion_tokens=128,
         )
     assert output.value == "合格"
     assert len(requests) == len(trace.spans) == 2
     assert [span.status for span in trace.spans] == ["failed", "succeeded"]
     assert "PRIVATE CANARY" not in repr(trace.spans)
     assert "合格" not in repr(trace.spans)
+    assert json.loads(requests[0].content)["max_completion_tokens"] == 128
 
 
 @pytest.mark.asyncio

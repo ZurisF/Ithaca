@@ -4,12 +4,13 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from content_safety import SafetyHit
 from local_project.inventory.ignore import is_ignored, load_rules
+from local_project.settings import get_settings
 from local_project.tools.read_only import (
     HARD_EXCLUDED,
-    MAX_FILE_BYTES,
     is_sensitive_path,
-    read_file_range,
+    read_file_safety,
 )
 
 ALLOWED_SUFFIXES = {
@@ -47,22 +48,25 @@ class InventoryItem:
     size: int | None
     encoding: str | None
     skip_reason: str | None
+    redactions: tuple[SafetyHit, ...] = ()
 
 
 def inventory(root: Path) -> tuple[list[InventoryItem], bool]:
+    settings = get_settings()
+    max_items = settings.inventory_max_items
     items: list[InventoryItem] = []
     partial = False
     visited_directories = 0
     rules_by_directory = {root: load_rules(root, [])}
     for directory, subdirs, files in os.walk(root, topdown=True, followlinks=False):
         visited_directories += 1
-        if visited_directories > MAX_FILES:
+        if visited_directories > max_items:
             return items, True
         current = Path(directory)
         rules = rules_by_directory[current]
         included_directories = []
         for name in sorted(subdirs):
-            if len(items) >= MAX_FILES:
+            if len(items) >= max_items:
                 return items, True
             path = current / name
             relative = path.relative_to(root).as_posix()
@@ -70,6 +74,8 @@ def inventory(root: Path) -> tuple[list[InventoryItem], bool]:
                 items.append(InventoryItem(relative, "directory", None, None, "sensitive_name"))
             elif path.is_symlink():
                 items.append(InventoryItem(relative, "symlink", None, None, "symlink"))
+            elif any(os.path.lexists(path / marker) for marker in (".git", ".hg", ".svn")):
+                items.append(InventoryItem(relative, "directory", None, None, "nested_repository"))
             elif is_ignored(path, rules, directory=True):
                 items.append(InventoryItem(relative, "directory", None, None, "gitignored"))
             else:
@@ -84,7 +90,7 @@ def inventory(root: Path) -> tuple[list[InventoryItem], bool]:
                 included_directories.append(name)
         subdirs[:] = included_directories
         for name in sorted(files):
-            if len(items) >= MAX_FILES:
+            if len(items) >= max_items:
                 partial = True
                 return items, partial
             path = current / name
@@ -107,13 +113,13 @@ def inventory(root: Path) -> tuple[list[InventoryItem], bool]:
                 continue
             try:
                 size = path.stat().st_size
-                if size > MAX_FILE_BYTES:
+                if size > settings.max_file_bytes:
                     items.append(InventoryItem(relative, "file", size, None, "too_large"))
                     continue
                 # Open through the same no-follow path as real tool reads; inventory does not cache content.
-                read_file_range(root, relative, 1, 1)
+                safe = read_file_safety(root, relative)
             except Exception:  # noqa: BLE001 - a file can disappear or become unreadable mid-walk
                 items.append(InventoryItem(relative, "file", None, None, "unreadable_or_binary"))
                 continue
-            items.append(InventoryItem(relative, "file", size, "utf-8", None))
+            items.append(InventoryItem(relative, "file", size, "utf-8", None, safe.hits))
     return items, partial

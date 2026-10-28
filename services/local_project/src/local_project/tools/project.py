@@ -8,18 +8,18 @@ from pathlib import Path, PurePosixPath
 from local_project.errors import LocalError
 from local_project.inventory.repository_map import file_symbols
 from local_project.inventory.walk import InventoryItem
+from local_project.settings import get_settings
 from local_project.tools.read_only import read_file_range, read_file_text
-
-MAX_SEARCH_FILES = 100
-MAX_MATCHES = 30
-MAX_TOOL_CHARS = 8_000
 
 
 def _encode(payload: dict) -> tuple[str, bool]:
+    max_chars = get_settings().observer_tool_chars
     body = json.dumps(payload, ensure_ascii=False)
-    if len(body) <= MAX_TOOL_CHARS:
+    if len(body) <= max_chars:
         return body, False
-    return json.dumps({"truncated": True, "preview": body[:3_800]}, ensure_ascii=False), True
+    return json.dumps(
+        {"truncated": True, "preview": body[: max_chars // 4]}, ensure_ascii=False
+    ), True
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,7 @@ class ProjectTools:
         return path
 
     def list_tree(self, subtree: str | None = None) -> ToolResult:
+        limit = get_settings().observer_search_files
         prefix = self._safe_path(subtree, exact=False)
         entries = [
             {"path": item.relative_path, "kind": item.kind, "skip_reason": item.skip_reason}
@@ -62,8 +63,8 @@ class ProjectTools:
             or item.relative_path == prefix
             or item.relative_path.startswith(prefix + "/")
         ]
-        body, clipped = _encode({"entries": entries[:100], "truncated": len(entries) > 100})
-        return ToolResult(body, frozenset(), {}, clipped or len(entries) > 100)
+        body, clipped = _encode({"entries": entries[:limit], "truncated": len(entries) > limit})
+        return ToolResult(body, frozenset(), {}, clipped or len(entries) > limit)
 
     def read_range(
         self, path: str | None, first_line: int | None, last_line: int | None
@@ -75,7 +76,7 @@ class ProjectTools:
         body, clipped = _encode(
             {"path": chosen, "first_line": first_line, "last_line": last_line, "content": content},
         )
-        visible_lines = len(content.splitlines())
+        visible_lines = content.count("\n") + 1 if content else 0
         evidence = (
             {chosen: frozenset(range(first_line, first_line + visible_lines))}
             if visible_lines and not clipped
@@ -96,6 +97,7 @@ class ProjectTools:
         return ToolResult(body, frozenset({chosen}), evidence, clipped)
 
     def search(self, query: str | None, path_filter: str | None, *, whole_word: bool) -> ToolResult:
+        settings = get_settings()
         if not query or len(query) > 100 or any(ord(char) < 32 for char in query):
             raise LocalError(400, "invalid_request", "检索词无效。")
         prefix = self._safe_path(path_filter, exact=False)
@@ -109,7 +111,7 @@ class ProjectTools:
         )
         matches = []
         read_paths = set()
-        for path in candidates[:MAX_SEARCH_FILES]:
+        for path in candidates[: settings.observer_search_files]:
             try:
                 lines = read_file_text(self.root, path).splitlines()
             except LocalError:
@@ -118,11 +120,14 @@ class ProjectTools:
                 if pattern.search(line):
                     matches.append({"path": path, "line": line_no, "excerpt": line[:200]})
                     read_paths.add(path)
-                    if len(matches) >= MAX_MATCHES:
+                    if len(matches) >= settings.observer_search_matches:
                         break
-            if len(matches) >= MAX_MATCHES:
+            if len(matches) >= settings.observer_search_matches:
                 break
-        truncated = len(candidates) > MAX_SEARCH_FILES or len(matches) >= MAX_MATCHES
+        truncated = (
+            len(candidates) > settings.observer_search_files
+            or len(matches) >= settings.observer_search_matches
+        )
         body, clipped = _encode({"matches": matches, "truncated": truncated})
         evidence: dict[str, set[int]] = {}
         if not clipped:

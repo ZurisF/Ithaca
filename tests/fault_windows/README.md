@@ -1,6 +1,6 @@
 # Fault-window test specifications
 
-> Status: executable-test specifications; the repository does not yet contain the application implementation or test runner.
+> Status: executable-test specifications; application implementation is in progress, and the scenarios are not yet fully automated.
 >
 > Authority: `PRODUCT_DEVELOPMENT.md` defines product behavior. `IMPLEMENTATION_DESIGN.md` defines the current engineering contract. `History/ENGINEERING_DESIGN.md` is only a source of reusable fault windows; conflicting historical behavior is not carried forward.
 

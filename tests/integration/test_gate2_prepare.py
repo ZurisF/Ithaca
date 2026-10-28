@@ -15,6 +15,60 @@ MARKDOWN = "# 项目\n## Modules\n### API\n服务入口。\n## Threads\n### Quer
 
 
 @pytest.mark.asyncio
+async def test_single_kind_and_empty_range_confirmation() -> None:
+    session_id = None
+    headers = {"X-Dev-User": USER_ID}
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        try:
+            created = await client.post("/v1/interviews", headers=headers)
+            assert created.status_code == 201
+            session_id = created.json()["id"]
+            base = f"/v1/interviews/{session_id}"
+            only_modules = "# Project\n## Modules\n### API\nEntry.\n## Notes\n### Not a range\n"
+            imported = await client.post(
+                f"{base}/snapshot:import", headers=headers, json={"markdown": only_modules}
+            )
+            assert imported.status_code == 200
+            assert imported.json()["sections"] == [{"kind": "module", "title": "API"}]
+            selection = {
+                "interview_direction": "project_overview",
+                "selected_sections": [{"kind": "module", "title": "API"}],
+            }
+            assert (
+                await client.put(f"{base}/selection", headers=headers, json=selection)
+            ).status_code == 200
+
+            plain = "# Project\nA service with no Module or Thread headings.\n"
+            imported = await client.post(
+                f"{base}/snapshot:import", headers=headers, json={"markdown": plain}
+            )
+            assert imported.status_code == 200
+            assert imported.json()["sections"] == []
+            assert (await client.get(base, headers=headers)).json()["selected_sections"] == []
+            selection["selected_sections"] = []
+            refused = await client.put(f"{base}/selection", headers=headers, json=selection)
+            assert refused.status_code == 400
+            assert (await client.get(base, headers=headers)).json()["interview_direction"] is None
+            accepted = await client.put(
+                f"{base}/selection",
+                headers=headers,
+                json={**selection, "confirm_empty_range": True},
+            )
+            assert accepted.status_code == 200
+            assert accepted.json()["selected_sections"] == []
+            assert accepted.json()["interview_direction"] == "project_overview"
+        finally:
+            if session_id:
+                async with engine.begin() as connection:
+                    await connection.execute(
+                        text("DELETE FROM app.interview_sessions WHERE id = :id"),
+                        {"id": session_id},
+                    )
+
+
+@pytest.mark.asyncio
 async def test_import_select_append_and_replay() -> None:
     session_id = None
     async with httpx.AsyncClient(
@@ -94,6 +148,52 @@ async def test_import_select_append_and_replay() -> None:
             ).status_code == 409
             current = await client.get(f"/v1/interviews/{session_id}", headers=user_headers)
             assert current.json()["selected_sections"] == []
+
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "UPDATE app.interview_sessions SET status = 'interviewing' WHERE id = :id"
+                    ),
+                    {"id": session_id},
+                )
+            assert (
+                await client.post(
+                    f"/v1/interviews/{session_id}/snapshot:import",
+                    headers=user_headers,
+                    json={"markdown": MARKDOWN},
+                )
+            ).status_code == 409
+            assert (
+                await client.post(
+                    opinion_url,
+                    headers={**user_headers, "Idempotency-Key": str(uuid4())},
+                    json={"text": "迟到观点"},
+                )
+            ).status_code == 409
+            assert (
+                await client.put(
+                    f"/v1/interviews/{session_id}/selection",
+                    headers=user_headers,
+                    json=selection,
+                )
+            ).status_code == 409
+            assert (
+                await client.post(
+                    f"/v1/interviews/{session_id}/snapshot:observe",
+                    headers={**user_headers, "Idempotency-Key": str(uuid4())},
+                    json={"source_handle": "A" * 43},
+                )
+            ).status_code == 409
+            assert (
+                await client.post(
+                    f"/v1/interviews/{session_id}/source:choose", headers=user_headers
+                )
+            ).status_code == 409
+            assert (
+                await client.post(
+                    f"/v1/interviews/{session_id}/plan:generate", headers=user_headers
+                )
+            ).status_code == 409
         finally:
             if session_id:
                 async with engine.begin() as connection:
