@@ -98,8 +98,8 @@ def _validate_snapshot(
     for kind, title, body in sections:
         if not any(CITATION.finditer(body)):
             errors.append(f"{kind} {title} needs a file and line citation")
-    if partial and "部分分析" not in markdown:
-        errors.append("partial coverage must be disclosed as 部分分析")
+    if partial and ("部分分析" not in markdown or "未覆盖" not in markdown):
+        errors.append("partial coverage must disclose 部分分析 and 未覆盖 scope")
     return errors
 
 

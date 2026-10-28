@@ -14,14 +14,14 @@
 ## 最近验证
 
 - `ruff check .` 与针对源码的 `ruff format --check services packages tests scripts` 通过；全仓格式检查会命中未改动的设计文档代码片段。
-- `pytest -q`：33 passed，4 skipped；可选的真实 Observer 单测在逐行引用校验增强后单独 1 passed，双 Runtime HTTP 合同与真实 Observer 单独 2 passed。
+- `pytest -q`：35 passed，4 skipped；可选的真实 Observer 单测在逐行引用校验增强后单独 1 passed，双 Runtime HTTP 合同与真实 Observer 单独 2 passed。
 - OpenAPI 与 Web TypeScript 客户端已重新生成；`npm run build --prefix apps/web` 通过。
 - 真实模型从本机代理调用，Planner 和 Observer 都已用合成材料验证；跨 Runtime 观察时模型 trace 以无内容元数据写入 Application。
 - 浏览器手动走通会话选择、Markdown 导入、范围勾选与保存。Web 目录授权与观察操作尚未接入页面。
 
 ## 接下来的施工依赖
 
-1. 补齐 Gate 2：完善文档、纯代码、大型/部分分析 fixture；模型 token 预算、Web 目录授权/观察、敏感命中元数据展示与故障窗口验证。本地 operation ID 合并只保证当前进程内短期去重，重启后可再次调用模型；业务持久化仍由 Application 的相同内容比较与条件写入保障。
+1. 补齐 Gate 2：完善文档、纯代码及更大目录 fixture；目前已有地图文件数预算触发部分分析的正反用例。仍需模型 token 预算、Web 目录授权/观察、敏感命中元数据展示与故障窗口验证。本地 operation ID 合并只保证当前进程内短期去重，重启后可再次调用模型；业务持久化仍由 Application 的相同内容比较与条件写入保障。
 2. 依 Gate 3 导入 11 个白名单题库文件，落地检索与首题发布；继续补齐当前需要的事务 seam。
 3. 依 Gate 4～7 实现面试、恢复、终止、赛后、策展、删除和正式 Web，并逐项映射 `tests/fault_windows`。
 
