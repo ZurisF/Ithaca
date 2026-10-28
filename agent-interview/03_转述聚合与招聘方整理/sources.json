@@ -1,0 +1,80 @@
+[
+  {
+    "id": "INT01",
+    "company": "未披露",
+    "role": "AI Agent 工程师招聘",
+    "round": "面试官经验整理，覆盖多位候选人",
+    "interview_date": "2026-09 (按页面日期与采集年份暂记)",
+    "source_title": "面了一轮 Agent 岗，我把问过的问题整理成了文章",
+    "url": "https://ac.nowcoder.com/discuss/1680599?channel=-1&source_id=0&type=0",
+    "source_type": "interviewer_first_person_question_compilation",
+    "source_tier": 1,
+    "traceability": "作者称自己面过十余位候选人，并表示问题来自实际面试；公司未披露",
+    "limitations": "招聘方视角整理，不是单个候选人的逐场复盘；问题代表作者个人面试风格。"
+  },
+  {
+    "id": "ANTAGG01",
+    "company": "蚂蚁集团",
+    "role": "AI Agent 开发",
+    "round": "二面（复活赛）",
+    "interview_date": "2026-10",
+    "source_title": "蚂蚁集团 AI Agent 开发复活赛二面：CR Agent 三级架构深挖",
+    "url": "https://mj.mianlingai.com/interview/antgroup-ai-agent-938917486311825408/",
+    "source_type": "aggregator_repost_attributed_to_nowcoder",
+    "source_tier": 3,
+    "traceability": "聚合站标注原来源为牛客，并给出公司、岗位、轮次和月份",
+    "limitations": "原始发帖者和完整原帖链接未在此页明确；参考解析不是原题证据；只把题目栏作为转述题目。"
+  },
+  {
+    "id": "ZYBAGG01",
+    "company": "作业帮",
+    "role": "Agent 开发",
+    "round": "一面",
+    "interview_date": "2026-09",
+    "source_title": "作业帮 Agent 开发一面：评测体系与 Trace 闭环",
+    "url": "https://mj.mianlingai.com/interview/zuoyebang-agent-dev-first-round-2916240/",
+    "source_type": "aggregator_repost_attributed_to_nowcoder",
+    "source_tier": 3,
+    "traceability": "聚合站标注原来源为牛客，并给出公司、岗位、轮次和月份",
+    "limitations": "原始候选人帖子不可从该页面独立核实；问题做了转述。"
+  },
+  {
+    "id": "DYAGG01",
+    "company": "字节跳动（抖音电商）",
+    "role": "Agent 开发工程师",
+    "round": "一面至三面",
+    "interview_date": "2026-09",
+    "source_title": "字节跳动抖音电商 Agent 开发一/二/三面",
+    "url": "https://mj.mianlingai.com/interview/bytedance-douyin-ecommerce-agent-937314680270311424/",
+    "source_type": "aggregator_repost_attributed_to_nowcoder",
+    "source_tier": 3,
+    "traceability": "聚合站标注原来源为牛客，并给出公司、岗位、轮次和月份",
+    "limitations": "页面混合多个轮次并有编辑整理；不把页面参考解析视为候选人原话。"
+  },
+  {
+    "id": "TENCENTAGG01",
+    "company": "腾讯",
+    "role": "AI 应用开发后端实习生 / AI 应用开发实习生等（多条记录）",
+    "round": "牛客作者筛选整理的多场候选人复盘",
+    "interview_date": "2026-04-21 至 2026-04-24",
+    "source_title": "大模型、Agent面经总结〖04/28〗腾讯 / 百度 总结（仅收腾讯条目）",
+    "url": "https://www.nowcoder.com/discuss/878600528970735616",
+    "source_type": "multi_candidate_roundup",
+    "source_tier": 3,
+    "traceability": "作者称从多篇候选人面经中挑选汇总；页面给出各场日期、岗位线索和若干原帖链接。",
+    "limitations": "题目由汇总作者转述，原帖目前无法逐条核对；保留 Agent 相关追问，不能视为腾讯统一题库。"
+  },
+  {
+    "id": "MEITUANAGG01",
+    "company": "美团",
+    "role": "AI Agent 开发岗（面经-03）",
+    "round": "面经集合；轮次/日期信息不完整",
+    "interview_date": "日期未核实（索引摘要含 2026-08 记录）",
+    "source_title": "美团AI Agent开发岗面经-03",
+    "url": "https://www.nowcoder.com/discuss/942593751954776064",
+    "source_type": "user_submitted_report_index_excerpt",
+    "source_tier": 3,
+    "traceability": "牛客页面标题能对应美团 AI Agent 开发岗；本轮公开索引摘要显示了两组 Agent 面经主题。",
+    "limitations": "当前抓取只能读取页面标题，正文不可见；题目来自此前可见的公开索引摘要，需降低检索权重并待原文恢复后复核。"
+  }
+]

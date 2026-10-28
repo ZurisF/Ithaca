@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="项目模拟面试多链路追问机制的交互演示：模型负责对话，程序负责路线，用户负责节奏。"
+    />
+    <title>项目深挖机制 · 交互演示</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="回到顶部">
+        <span class="brand-mark">I</span>
+        <span>ITHACA LAB</span>
+      </a>
+      <nav aria-label="页面导航">
+        <a href="#demo">实操演示</a>
+        <a href="#mechanism">完整机制</a>
+      </nav>
+      <span class="status-pill"><i></i> STATIC DEMO</span>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="eyebrow"><span>01</span> PROJECT INTERVIEW ENGINE</div>
+        <h1>别解释机制。<br /><em>跑一遍。</em></h1>
+        <p class="hero-copy">
+          选训练路线，回答一个真实问题。右侧会同步拆解：模型看懂了什么、程序允许它往哪走，以及为什么下一问仍然连贯。
+        </p>
+        <a class="primary-link" href="#demo">开始实操 <span>↓</span></a>
+
+        <div class="rule-strip" aria-label="核心原则">
+          <div><b>程序</b><span>管路线</span></div>
+          <div><b>模型</b><span>管对话</span></div>
+          <div><b>用户</b><span>管节奏</span></div>
+        </div>
+      </section>
+
+      <section class="demo-section" id="demo">
+        <div class="section-heading">
+          <div>
+            <span class="section-number">02</span>
+            <h2>配置这一场面试</h2>
+          </div>
+          <p>这不是题目清单。你选择的是“从哪些角度理解项目”。</p>
+        </div>
+
+        <div class="setup-grid">
+          <section class="setup-card">
+            <div class="card-label">A · 项目范围</div>
+            <h3>这次看多大范围？</h3>
+            <div class="segmented" id="scope-options" role="group" aria-label="项目范围">
+              <button class="segment active" data-scope="single">单条核心链路</button>
+              <button class="segment" data-scope="multi">多条链路</button>
+              <button class="segment" data-scope="all">全项目自适应</button>
+            </div>
+            <div class="scope-preview">
+              <span>本次示例项目</span>
+              <strong id="scope-label">项目材料 → 上下文快照</strong>
+            </div>
+          </section>
+
+          <section class="setup-card route-card">
+            <div class="card-label">B · 训练路线</div>
+            <h3>希望从哪些角度追问？</h3>
+            <div class="route-picker" id="route-picker">
+              <button class="route-chip active" data-route="walkthrough"><i></i>项目导览</button>
+              <button class="route-chip active" data-route="tradeoff"><i></i>设计取舍</button>
+              <button class="route-chip active" data-route="failure"><i></i>故障恢复</button>
+              <button class="route-chip" data-route="evaluation"><i></i>质量评估</button>
+              <button class="route-chip" data-route="ownership"><i></i>个人贡献</button>
+              <button class="route-chip" data-route="evolution"><i></i>演进复盘</button>
+            </div>
+            <button class="start-button" id="start-demo">生成路线并开始</button>
+          </section>
+        </div>
+
+        <section class="engine" id="engine" aria-live="polite">
+          <div class="engine-header">
+            <div>
+              <span class="live-dot"></span>
+              <span>SESSION / OPEN ENDED</span>
+            </div>
+            <div class="engine-actions">
+              <button id="pause-button">暂停</button>
+              <button id="reset-button">重新开始</button>
+            </div>
+          </div>
+
+          <div class="route-rail-wrap">
+            <div class="rail-caption">
+              <span>会话路线</span>
+              <small>没有“三轮上限”，只显示当前目标和自然转场</small>
+            </div>
+            <div class="route-rail" id="route-rail"></div>
+          </div>
+
+          <div class="engine-grid">
+            <section class="conversation-panel">
+              <div class="panel-kicker">面试现场</div>
+              <div class="interviewer">
+                <div class="avatar">I</div>
+                <div>
+                  <span>INTERVIEWER</span>
+                  <p id="question-text">点击“生成路线并开始”，进入第一问。</p>
+                </div>
+              </div>
+
+              <div class="answer-area" id="answer-area">
+                <div class="answer-prompt">选择一种回答，观察系统下一步</div>
+                <div class="answer-options" id="answer-options">
+                  <button disabled>等待开始</button>
+                </div>
+              </div>
+
+              <div class="conversation-footer">
+                <span id="turn-counter">TURN 00</span>
+                <span>可随时暂停 · 切换 · 结束</span>
+              </div>
+            </section>
+
+            <aside class="xray-panel">
+              <div class="panel-kicker">机制透视 / XRAY</div>
+
+              <article class="xray-step model-step">
+                <header><span>1</span><b>模型理解回答</b><small>PROMPT</small></header>
+                <p id="model-readout">等待用户回答。模型只做语义判断，不负责修改业务状态。</p>
+              </article>
+
+              <article class="xray-step rules-step">
+                <header><span>2</span><b>程序检查路线</b><small>RULES</small></header>
+                <p id="rules-readout">程序将提供合法的下一步动作，并阻止重复、越界和无理由跳转。</p>
+              </article>
+
+              <article class="xray-step state-step">
+                <header><span>3</span><b>写入会话状态</b><small>STATE</small></header>
+                <dl class="state-grid">
+                  <div><dt>当前链</dt><dd id="state-chain">—</dd></div>
+                  <div><dt>本轮动作</dt><dd id="state-move">—</dd></div>
+                  <div><dt>待返回分支</dt><dd id="state-stack">0</dd></div>
+                  <div><dt>开放缺口</dt><dd id="state-gaps">0</dd></div>
+                </dl>
+              </article>
+
+              <div class="why-next">
+                <span>WHY THIS NEXT?</span>
+                <p id="why-next">下一问必须同时满足：与回答有关、位于合法路线、产生新的理解。</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </section>
+
+      <section class="mechanism-section" id="mechanism">
+        <div class="section-heading inverse">
+          <div>
+            <span class="section-number">03</span>
+            <h2>完整机制，一项不省</h2>
+          </div>
+          <p>演示负责让人看懂；这里负责把设计边界说完整。</p>
+        </div>
+
+        <div class="mechanism-layout">
+          <div class="mechanism-map" aria-label="机制数据流">
+            <div class="map-node source"><span>01</span><b>项目快照</b><small>有什么可讲</small></div>
+            <div class="map-arrow">→</div>
+            <div class="map-node plan"><span>02</span><b>训练地图</b><small>哪里没练过</small></div>
+            <div class="map-arrow">→</div>
+            <div class="map-node session"><span>03</span><b>会话计划</b><small>这次走哪条路</small></div>
+            <div class="map-arrow">→</div>
+            <div class="map-node runtime"><span>04</span><b>逐轮状态</b><small>现在走到哪里</small></div>
+          </div>
+
+          <div class="accordion" id="mechanism-accordion">
+            <details open>
+              <summary><span>01</span>什么是“追问链”？<i>+</i></summary>
+              <div class="detail-body">
+                <p>它不是固定问题列表，而是一组训练动作。比如“设计取舍链”规定先确认选择，再问动机、替代方案、代价和约束变化；具体怎么问由模型结合项目与用户回答生成。</p>
+              </div>
+            </details>
+            <details>
+              <summary><span>02</span>多条链怎样组合？<i>+</i></summary>
+              <div class="detail-body">
+                <p>开始前，Planner 根据项目快照、用户历史和本场选择生成若干段落。每段绑定项目链路、训练角度和退出条件，但不会预写整场问题。用户既可只选一条，也可组合导览、取舍、故障、评估、贡献与复盘。</p>
+              </div>
+            </details>
+            <details>
+              <summary><span>03</span>每一轮到底发生什么？<i>+</i></summary>
+              <div class="detail-body">
+                <ol>
+                  <li>程序读取当前链、已覆盖内容、开放缺口和分支栈。</li>
+                  <li>程序给出合法动作：澄清、深入、施加约束、开分支、返回或转场。</li>
+                  <li>模型理解回答，选择一个合法动作并生成一个主要问题。</li>
+                  <li>程序校验动作、写入状态，再把问题交给用户。</li>
+                </ol>
+              </div>
+            </details>
+            <details>
+              <summary><span>04</span>为什么不会聊散？<i>+</i></summary>
+              <div class="detail-body">
+                <p>系统只允许沿项目关系和训练图转移。临时进入新风险时，会把原路线压入“分支栈”；风险问清后自动返回。跨链切换必须有明确理由，例如当前目标完成、用户主动切换或新信息更值得追问。</p>
+              </div>
+            </details>
+            <details>
+              <summary><span>05</span>为什么取消“三轮上限”？<i>+</i></summary>
+              <div class="detail-body">
+                <p>轮数不能代表深度。新机制使用退出条件：目标已覆盖、继续追问没有新增信息、用户要求切换，或用户主动停止。长面试是正常模式，轮数或时间只作为用户可选的软预算。</p>
+              </div>
+            </details>
+            <details>
+              <summary><span>06</span>Prompt 和程序怎样分工？<i>+</i></summary>
+              <div class="detail-body two-column-copy">
+                <div><b>Prompt / 模型</b><p>理解自然语言、识别回答覆盖与缺口、选择语义上最合适的动作、生成连贯问题和转场表达。</p></div>
+                <div><b>程序 / 编排器</b><p>限定合法动作、跟踪覆盖、保存分支、执行暂停恢复、过滤禁问主题、防重复，并校验一次只问一个主要问题。</p></div>
+              </div>
+            </details>
+            <details>
+              <summary><span>07</span>用户能控制什么？<i>+</i></summary>
+              <div class="detail-body">
+                <p>用户分别选择项目范围和训练方式，可以暂停、恢复、屏蔽主题、临时换方向或随时结束。停止后保存当前链、开放缺口、分支栈和推荐恢复点，下次从语义断点继续。</p>
+              </div>
+            </details>
+            <details>
+              <summary><span>08</span>系统最终保存什么？<i>+</i></summary>
+              <div class="detail-body">
+                <p>项目事实保存在不可变快照；用户练习记录单独保存，包括问过什么、回答覆盖了什么、尚未解决什么以及下次建议从哪里继续。不会用一个虚假的“掌握度 83%”覆盖原始证据。</p>
+                <pre><code>{
+  "active_chain": "failure_recovery",
+  "active_unit": "incremental_index_staleness",
+  "branch_stack": ["decision_tradeoff:redaction_timing"],
+  "open_gaps": ["rename_invalidation", "false_positive_review"],
+  "stop_policy": "user_controlled"
+}</code></pre>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing">
+        <span>THE WHOLE IDEA</span>
+        <h2>硬编码轨道，<br />不硬编码台词。</h2>
+        <p>模型让追问像人，程序让追问有方向，用户决定这场训练走多远。</p>
+        <a href="#demo">再跑一次演示 ↑</a>
+      </section>
+    </main>
+
+    <footer>
+      <span>ITHACA / PROJECT INTERVIEW LAB</span>
+      <span>INTERACTION CONCEPT · 2026</span>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

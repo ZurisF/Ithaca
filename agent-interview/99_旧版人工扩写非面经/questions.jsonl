@@ -1,0 +1,62 @@
+{"id": "Q001", "section": "项目深挖", "origin": "reported_question", "source_ids": ["S2", "S3", "S4", "S7"], "question": "选一个真实请求，从输入、意图和参数识别、检索、规划、工具调用、校验、失败恢复到结果落库讲完整链路；标清个人负责模块并举一个 badcase。"}
+{"id": "Q002", "section": "项目深挖", "origin": "sourced_expansion", "source_ids": ["S1", "S4", "S7"], "question": "简历写任务成功率提升 20% 或耗时从 1 小时降到 3 分钟。请定义指标、样本量、基线、切分、人工复核和线上分布，并说明失败长尾会不会被平均值掩盖。"}
+{"id": "Q003", "section": "项目深挖", "origin": "reported_question", "source_ids": ["S1", "S2", "S4", "S7"], "question": "项目为什么选 LangGraph？如果改成普通状态机、LangChain AgentExecutor 或自研 loop，会分别获得和失去什么？请结合节点、条件边、checkpoint、恢复能力和迁移成本回答。"}
+{"id": "Q004", "section": "项目深挖", "origin": "reported_question", "source_ids": ["S1", "S3", "S7"], "question": "任务步骤固定但异常分支不固定时，哪些步骤用 workflow，哪些交给模型决策？比较可复现性、失败定位、延迟和成本，并判断 95% 固定路径是否还值得用 Agent。"}
+{"id": "Q005", "section": "项目深挖", "origin": "sourced_expansion", "source_ids": ["S2", "S4", "S7"], "question": "比较简历里两个 Agent 项目的用户目标、动作空间、状态管理、工具风险、成功定义和评测方式；如果一个本质是 LLM pipeline，如何准确描述？"}
+{"id": "Q006", "section": "项目深挖", "origin": "sourced_expansion", "source_ids": ["S7"], "question": "报告生成 Agent 没有把 PRD、技术方案或历史缺陷作为输入，是合理的范围控制还是设计遗漏？补入后如何处理权限、版本、冲突和引用？"}
+{"id": "Q007", "section": "项目深挖", "origin": "sourced_expansion", "source_ids": ["S1", "S4", "S7"], "question": "用户报告 Agent 查询超时，请按 trace 拆解模型、检索、工具、数据库和下游服务耗时；先查哪些日志指标？举一个亲自修复并经过回归验证的问题。"}
+{"id": "Q008", "section": "控制流与状态", "origin": "reported_question", "source_ids": ["S1", "S2", "S3", "S7"], "question": "内部运维任务步骤大体固定但异常可能追加诊断时，如何比较 Workflow、ReAct 和 Plan-and-Execute/Replan？怎样避免把所有步骤都交给模型？"}
+{"id": "Q009", "section": "控制流与状态", "origin": "sourced_expansion", "source_ids": ["S1", "S3", "S6"], "question": "Supervisor 先查询再路由给子 Agent，既要解释路由又要支持重启恢复。请设计状态结构、路由记录、checkpoint、恢复流程和用户可见进度。"}
+{"id": "Q010", "section": "控制流与状态", "origin": "reported_question", "source_ids": ["S1", "S3", "S7"], "question": "Agent 未超过最大步数却反复调用相同工具并持续花费 token。如何识别无进展？讨论 action 指纹、状态变化、预算、超时、熔断和误判恢复。"}
+{"id": "Q011", "section": "控制流与状态", "origin": "sourced_expansion", "source_ids": ["S1", "S7", "S8"], "question": "长任务执行到第三步时 worker 崩溃，之前步骤可能已产生副作用。checkpoint 存什么？恢复后如何确认工具是否已执行并避免重复扣款或发通知？"}
+{"id": "Q012", "section": "控制流与状态", "origin": "sourced_expansion", "source_ids": ["S1", "S8"], "question": "同一用户两条消息落到不同 worker 并同时修改会话状态。比较按会话串行队列、乐观版本号、分布式锁和事件日志，并说明崩溃恢复。"}
+{"id": "Q013", "section": "控制流与状态", "origin": "reported_question", "source_ids": ["S1", "S9"], "question": "举一个多 Agent 有明显收益的业务，设计角色、输入输出协议、状态共享和意见冲突处理；如何发现互相等待或子 Agent 越权读取任务？"}
+{"id": "Q014", "section": "控制流与状态", "origin": "reported_question", "source_ids": ["S1", "S3", "S7"], "question": "客服需求同时包含固定政策查询和少数退款操作，如何选择 RAG、规则 workflow、工具型 Agent 或微调？给出最小方案和暂不采用其他方案的理由。"}
+{"id": "Q015", "section": "控制流与状态", "origin": "reported_question", "source_ids": ["S3", "S6"], "question": "用户新会话说继续昨天的任务。区分运行状态、当前上下文和长期记忆的职责，说明如何定位原任务、验证身份、处理过期状态及记忆缺失。"}
+{"id": "Q016", "section": "控制流与状态", "origin": "sourced_expansion", "source_ids": ["S9"], "question": "多 Agent 错把用户 B 的摘要带入用户 A 的回答。设计租户、用户、会话、任务隔离和排查日志，并说明如何避免敏感内容泄漏。"}
+{"id": "Q017", "section": "工具与安全", "origin": "reported_question", "source_ids": ["S1", "S3", "S7"], "question": "系统有 API、可复用流程和本地执行能力。如何决定封装为 tool、Skill、MCP Server 或 CLI？说明发现、版本、权限和观测方式。"}
+{"id": "Q018", "section": "工具与安全", "origin": "reported_question", "source_ids": ["S1", "S3"], "question": "工具从 20 个增加到 200 个，多个描述相似。设计分组、检索、路由或逐步暴露，并说明如何测误选率、漏选率和路由延迟。"}
+{"id": "Q019", "section": "工具与安全", "origin": "sourced_expansion", "source_ids": ["S1", "S3", "S7"], "question": "MCP 工具频繁增字段、改枚举或错误格式。如何设计 schema 版本、校验、兼容层、契约测试和灰度？未知字段应忽略、拒绝还是转人工？"}
+{"id": "Q020", "section": "工具与安全", "origin": "reported_question", "source_ids": ["S1", "S7", "S8"], "question": "工具可能发生参数错误、无权限、资源不存在、业务拒绝、超时或部分结果。定义错误类型、重试策略、内部事件、用户提示和恢复状态。"}
+{"id": "Q021", "section": "工具与安全", "origin": "sourced_expansion", "source_ids": ["S8"], "question": "Agent 可查余额、退款和扣积分，资金操作需审计且不能重复。设计权限、幂等键、预执行、人工确认、超时对账和补偿；调用超时但支付可能成功时怎么办？"}
+{"id": "Q022", "section": "工具与安全", "origin": "reported_question", "source_ids": ["S1"], "question": "知识库文档含有诱导 Agent 导出客户数据的指令，而 Agent 有数据库工具。设计从内容进入、检索、模型决策到工具执行的纵深防线。"}
+{"id": "Q023", "section": "工具与安全", "origin": "sourced_expansion", "source_ids": ["S3"], "question": "模型连续三次返回非法 JSON、缺字段或重复内容，但 UI 只接受严格 JSON。设计修复、重采样、换模型、文本回退和人工接管顺序及预算上限。"}
+{"id": "Q024", "section": "工具与安全", "origin": "scenario_synthesis", "source_ids": [], "question": "子 Agent 返回详细内部文本，产品只允许展示可核验结论、引用和简短理由。如何定义内外部 schema、过滤边界并防止提示词或隐私字段泄露？"}
+{"id": "Q025", "section": "工具与安全", "origin": "reported_question", "source_ids": ["S6"], "question": "本地诊断 Agent 需要查看进程和日志，偶尔建议终止进程。设计命令白名单、权限级别、沙箱、超时、脱敏和用户确认；如何防止选错 PID 或日志注入？"}
+{"id": "Q026", "section": "工具与安全", "origin": "reported_question", "source_ids": ["S3"], "question": "上下文无法装下 100 个 Skill/MCP 定义。设计按需发现和加载，并处理误导描述、重名工具、权限不可见和候选筛选。"}
+{"id": "Q027", "section": "RAG 与记忆", "origin": "reported_question", "source_ids": ["S2", "S4", "S6", "S9"], "question": "企业员工上传 PDF、Markdown、Excel 和网页，文档有部门权限且持续更新。讲解析、切块、元数据、Embedding、混合检索、重排、引用和撤权更新。"}
+{"id": "Q028", "section": "RAG 与记忆", "origin": "scenario_synthesis", "source_ids": [], "question": "PDF/Excel 含跨页表头、合并单元格、脚注和多级分组。如何恢复结构关系与页码，而不是固定长度切块？检索命中单元格后如何回捞充分上下文？"}
+{"id": "Q029", "section": "RAG 与记忆", "origin": "scenario_synthesis", "source_ids": [], "question": "FAQ、操作手册和地区公告对退货规则说法冲突。如何把权威度、时效和适用范围纳入检索排序？证据冲突时回答、澄清还是拒答？"}
+{"id": "Q030", "section": "RAG 与记忆", "origin": "reported_question", "source_ids": ["S2", "S4", "S9"], "question": "Recall@20 很高但答案准确率低。如何分别排查 query 改写、候选噪声、rerank、上下文拼接、模型忽略证据和业务规则缺失？"}
+{"id": "Q031", "section": "RAG 与记忆", "origin": "reported_question", "source_ids": ["S2", "S9"], "question": "BM25 命中精确型号，向量召回语义相似但型号不同。如何融合不同尺度的分数？比较归一化、加权和 RRF，并设计分类型离线实验。"}
+{"id": "Q032", "section": "RAG 与记忆", "origin": "scenario_synthesis", "source_ids": [], "question": "100 个候选经 Cross-Encoder 重排导致 p95 延迟超预算。如何通过候选数、批处理、蒸馏、缓存、硬过滤和超时回退优化，且不漏掉关键答案？"}
+{"id": "Q033", "section": "RAG 与记忆", "origin": "reported_question", "source_ids": ["S3", "S6"], "question": "几十万字手册和几十轮对话如何组合父子块、章节摘要、按需检索、上下文压缩和滑动窗口？如何保留例外条件、时间信息和引用，避免 Lost-in-the-Middle？"}
+{"id": "Q034", "section": "RAG 与记忆", "origin": "scenario_synthesis", "source_ids": [], "question": "用户问上个月买的耳机能否退，系统只有七天无理由规则且不知道订单状态。如何区分政策知识、实时数据缺失和意图不清，并决定查什么或追问什么？"}
+{"id": "Q035", "section": "RAG 与记忆", "origin": "reported_question", "source_ids": ["S6"], "question": "长期记忆偏好人工客服，但本轮用户明确要求先查订单。定义当前指令、近期会话和长期记忆优先级，并说明是否更新长期偏好。"}
+{"id": "Q036", "section": "RAG 与记忆", "origin": "reported_question", "source_ids": ["S6", "S9"], "question": "对话中混有稳定偏好、临时订单号、敏感病史和一次性诉求。设计记忆候选、确认、敏感过滤、有效期、置信度、修改删除和检索策略。"}
+{"id": "Q037", "section": "RAG 与记忆", "origin": "scenario_synthesis", "source_ids": [], "question": "384、768 和 1536 维 Embedding 如何选择？语料含中文客服和代码、QPS 高且预算有限，如何联合评估召回、延迟、存储、语言质量与迁移成本？"}
+{"id": "Q038", "section": "RAG 与记忆", "origin": "scenario_synthesis", "source_ids": [], "question": "手册含示意图、截图、表格和扫描件。如何设计 OCR/视觉索引、图表关系、页码定位和引用？视觉理解不确定时如何显式表达？"}
+{"id": "Q039", "section": "可靠性与成本", "origin": "sourced_expansion", "source_ids": ["S1", "S3", "S8"], "question": "多副本服务支持十万用户、长任务和跨天恢复。比较进程内存、Redis、关系数据库和对象存储的职责，并处理 TTL、归档和缓存故障。"}
+{"id": "Q040", "section": "可靠性与成本", "origin": "scenario_synthesis", "source_ids": [], "question": "Agent 并行查询订单、物流和政策，部分工具有依赖且返回时间不同。如何表达依赖图、事件序号、部分失败，避免迟到的旧结果进入新一轮上下文？"}
+{"id": "Q041", "section": "可靠性与成本", "origin": "reported_question", "source_ids": ["S3"], "question": "SSE 流式输出模型 token 和工具事件，客户端断线后重连。如何区分重订阅与重新执行、回放事件且避免重复工具调用，并传播用户取消信号？"}
+{"id": "Q042", "section": "可靠性与成本", "origin": "sourced_expansion", "source_ids": ["S1", "S4"], "question": "模型服务抖动造成超时和重试堆积。设计 deadline、退避、熔断、舱壁、队列、降级和过载拒绝，并说明哪些错误不重试。"}
+{"id": "Q043", "section": "可靠性与成本", "origin": "reported_question", "source_ids": ["S1", "S3"], "question": "用户量没变但每任务 token 和费用翻倍。如何拆解上下文、重试、工具循环、模型路由和输出长度，追踪变化并设计任务预算与租户限额？"}
+{"id": "Q044", "section": "可靠性与成本", "origin": "scenario_synthesis", "source_ids": [], "question": "少数租户执行重任务、多数用户做短查询。限流应按用户、租户、模型还是工具？如何保障公平、配额、突发流量及厂商额度？"}
+{"id": "Q045", "section": "可靠性与成本", "origin": "sourced_expansion", "source_ids": ["S1", "S4", "S7"], "question": "需要记录 prompt、检索片段、工具参数和输出来复盘，但内容含个人信息与凭证。设计字段脱敏、访问控制、采样、保留期和安全重放。"}
+{"id": "Q046", "section": "可靠性与成本", "origin": "scenario_synthesis", "source_ids": [], "question": "用户可配置数据库连接，错误配置不能拖垮服务，修正后无需重启。设计校验、连接池轮换、探活、隔离、密钥存储和回滚。"}
+{"id": "Q047", "section": "可靠性与成本", "origin": "sourced_expansion", "source_ids": ["S6"], "question": "多个用户同时让 Agent 执行代码或诊断问题。如何隔离文件、进程、网络、资源和凭证，确定并发上限并在任务卡死时终止和审计？"}
+{"id": "Q048", "section": "评测与上线", "origin": "reported_question", "source_ids": ["S2", "S9"], "question": "设计一条可复现 Agent 评测样本，涵盖请求、预期证据、允许/禁止工具、最终状态和判分依据；如何区分人工标注和生成数据并检查覆盖盲区？"}
+{"id": "Q049", "section": "评测与上线", "origin": "reported_question", "source_ids": ["S1", "S2", "S4"], "question": "端到端 Agent 任务失败时，如何分层评估工具、检索/模型步骤和最终任务？如何归因 query、检索、工具、权限、模型或产品流程？"}
+{"id": "Q050", "section": "评测与上线", "origin": "reported_question", "source_ids": ["S1"], "question": "LLM-as-Judge 离线得分高但用户投诉增加。如何检查长度、格式、品牌或措辞偏差，并用人工盲评、成对比较、规则和抽样校准评审器？"}
+{"id": "Q051", "section": "评测与上线", "origin": "reported_question", "source_ids": ["S1", "S4", "S7"], "question": "Agent 引用过期文档并发起错误操作。讲清从反馈、trace、根因、修复、回归样本、版本发布到线上观察的闭环，避免只加 prompt 补丁。"}
+{"id": "Q052", "section": "评测与上线", "origin": "sourced_expansion", "source_ids": ["S1"], "question": "新版本完成率提高但工具调用次数和 p95 延迟也上升。如何切实验组、确定样本量和周期，制定回滚阈值并让人工接管在途任务？"}
+{"id": "Q053", "section": "评测与上线", "origin": "reported_question", "source_ids": ["S1"], "question": "点赞或点踩能否直接用作训练数据？讨论反馈噪声、用户目标差异、误点、隐私，并说明如何转成验证过的评测或偏好数据。"}
+{"id": "Q054", "section": "评测与上线", "origin": "sourced_expansion", "source_ids": ["S1", "S2", "S4"], "question": "同一问题运行十次，成功率、工具选择、成本和尾延迟不同。如何报告单次成功率、pass@k、方差和成本，并按产品风险设验收标准？"}
+{"id": "Q055", "section": "系统设计与基础", "origin": "sourced_expansion", "source_ids": ["S1", "S8"], "question": "设计支持政策查询、订单物流查询和退款的客服 Agent，角色权限不同。画架构并说明澄清、审批、重复请求、失败恢复和人工接管。"}
+{"id": "Q056", "section": "系统设计与基础", "origin": "sourced_expansion", "source_ids": ["S1", "S3", "S8"], "question": "设计多租户 Agent 平台，支持十万用户、长任务、跨会话恢复、工具、流式输出、审计和限流。说明架构、状态、调度、权限和瓶颈验证。"}
+{"id": "Q057", "section": "系统设计与基础", "origin": "sourced_expansion", "source_ids": ["S6"], "question": "设计 Coding Agent：读取仓库、改文件、运行测试和提交 diff。区分确定性程序与模型职责，说明沙箱、命令权限、恢复、审核和测试证据。"}
+{"id": "Q058", "section": "系统设计与基础", "origin": "reported_question", "source_ids": ["S3"], "question": "从 DNS、TCP/TLS、HTTP、静态资源到 SSE 流式输出，讲用户访问 Agent 页面的链路；首屏慢、首 token 慢和流中断分别如何测和优化？"}
+{"id": "Q059", "section": "系统设计与基础", "origin": "sourced_expansion", "source_ids": ["S7", "S8"], "question": "设计会话、任务、工具日志和评测样本存储。哪些放关系库或 Redis？如何处理缓存故障、状态覆盖、大偏移分页，以及数据库提交成功但消息发送失败？"}
+{"id": "Q060", "section": "系统设计与基础", "origin": "sourced_expansion", "source_ids": ["S6", "S8"], "question": "工具服务偶发连接超时但容器进程正常。如何沿 DNS、连接建立、连接池、服务队列、超时配置和网络策略排查，并识别重试放大？"}
+{"id": "Q061", "section": "系统设计与基础", "origin": "reported_question", "source_ids": ["S2", "S6"], "question": "面试现场遇到堆/反悔贪心、前缀树、二叉树视图或动态规划，如何讲复杂度和边界测试？这些结构如何用于工具路由、事件排序或候选去重？"}
+{"id": "Q062", "section": "系统设计与基础", "origin": "reported_question", "source_ids": ["S3"], "question": "模型返回 JSON 动态渲染交互卡片，用户点击会触发后端操作。设计 schema 校验、组件白名单、API 绑定、权限复核和流式增量渲染；合法 JSON 是否就代表可安全执行？"}

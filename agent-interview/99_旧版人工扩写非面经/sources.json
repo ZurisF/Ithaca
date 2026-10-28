@@ -1,0 +1,92 @@
+[
+  {
+    "id": "S1",
+    "title": "面了一轮 Agent 岗，我把问过的问题整理成了文章",
+    "url": "https://ac.nowcoder.com/discuss/1680599?channel=-1&source_id=0&type=0",
+    "platform": "牛客",
+    "date": "2026-10 (页面未显示明确发布日期)",
+    "evidence_type": "interviewer_report",
+    "provenance": "作者自述面试了十来位候选人，按实际面试方向整理；不是候选人逐场记录。",
+    "confidence_note": "第一手招聘方视角，问题覆盖较系统；作者的判断和录用标准属于个人经验。"
+  },
+  {
+    "id": "S2",
+    "title": "字节跳动 AI Agent 开发岗面经-08",
+    "url": "https://www.nowcoder.com/discuss/940040254214389760?sourceSSR=users",
+    "platform": "牛客",
+    "date": "2026-09 (条目包含 9 月 21–24 日面试记录)",
+    "evidence_type": "candidate_reports_collection",
+    "provenance": "汇集多条带岗位和面试日期的用户面经；页面有部分内容需登录或订阅。",
+    "confidence_note": "具体日期和问法有参考价值；不同条目来自不同候选人，不能当作同一人的固定面试流程。"
+  },
+  {
+    "id": "S3",
+    "title": "字节跳动 AI Agent 开发岗面经-07",
+    "url": "https://www.nowcoder.com/discuss/940390952902914048?sourceSSR=post&weFlow=true",
+    "platform": "牛客",
+    "date": "2026-10-12 至 2026-10-13（帖内记录）",
+    "evidence_type": "candidate_reports_collection",
+    "provenance": "公开页面列出多条 AI Agent / AI 全栈岗位记录，包含项目追问、Agent loop、MCP、Skill、上下文、动态 UI 和基础工程。",
+    "confidence_note": "面经是用户回忆且存在订阅截断；问题主题可用，不能据此推断完整轮次或命中率。"
+  },
+  {
+    "id": "S4",
+    "title": "某中型 AI 设备研发 AI Agent 开发岗一二面面经（已拿 offer）",
+    "url": "https://ai.codefather.cn/post/2067118684236795905",
+    "platform": "鱼皮 AI 导航",
+    "date": "2026-06-17",
+    "evidence_type": "first_person_candidate_report",
+    "provenance": "候选人自述，5–10 年经验；一面约 50 分钟、二面约 55 分钟，之后拿到 offer。",
+    "confidence_note": "一手个人经历，适合观察项目深挖和场景题；不能代表其他公司或级别。"
+  },
+  {
+    "id": "S5",
+    "title": "最近在面试 AI Agent 开发工程师！面经分享",
+    "url": "https://blog.csdn.net/weixin_43958728/article/details/152039160",
+    "platform": "CSDN",
+    "date": "2025-09-24",
+    "evidence_type": "first_person_candidate_report",
+    "provenance": "作者自述有多年 Java 后端经验、进行了 20 多场面试并拿到多家 offer；文章包含模型层和 Agent 开发相关问题。",
+    "confidence_note": "较早的转型经验，可补充基础问题；框架和生态问法可能已变化。"
+  },
+  {
+    "id": "S6",
+    "title": "百度 AI Agent 开发岗面经：记忆模块与上下文压缩",
+    "url": "https://mj.mianlingai.com/interview/baidu-ai-agent-developer-05-931706698258010112/",
+    "platform": "面灵面经（标注来源为牛客）",
+    "date": "页面包含 2026-08-18 的记录",
+    "evidence_type": "aggregated_candidate_report",
+    "provenance": "聚合页面列出多条百度相关面试问题，含记忆、上下文、RAG、Skill、沙箱、网络和算法。",
+    "confidence_note": "问题列表有用，但经聚合转载，原帖和每题的轮次对应关系需谨慎看待。"
+  },
+  {
+    "id": "S7",
+    "title": "美团 Agent 开发一面凉经：26 问深挖 Agent 工程与 Skill 设计",
+    "url": "https://mj.mianlingai.com/interview/meituan-agent-development-first-round-2924661/",
+    "platform": "面灵面经（标注来源为牛客）",
+    "date": "2026-10",
+    "evidence_type": "aggregated_candidate_report",
+    "provenance": "聚合页面给出一面题目，涉及完整请求链路、Workflow 选择、Skill/MCP、记忆和失败回流。",
+    "confidence_note": "题目有场景价值；来源经过聚合，不能把页面的参考解析当成面试官原话。"
+  },
+  {
+    "id": "S8",
+    "title": "京东后端 Agent 开发一面面经",
+    "url": "https://mj.mianlingai.com/interview/jd-backend-agent-first-round-2845451/",
+    "platform": "面灵面经（标注来源为牛客）",
+    "date": "2026 年，页面未见明确面试日期",
+    "evidence_type": "aggregated_candidate_report",
+    "provenance": "题目把 Agent 风险控制与 Java、并发、Redis、MySQL 等后端基础放在同一轮。",
+    "confidence_note": "可用于发现应用开发岗位中的基础工程题；聚合页面的答案解析不等于原始面经。"
+  },
+  {
+    "id": "S9",
+    "title": "Agent 开发岗面试题——整理",
+    "url": "https://ac.nowcoder.com/discuss/1665837?channel=-1&source_id=discuss_terminal_discuss_hot_nctrack&type=0",
+    "platform": "牛客",
+    "date": "页面发布于 8 月（年份在抓取页面中未显示）",
+    "evidence_type": "community_question_compilation",
+    "provenance": "社区整理的问答型题单，含 Agent 架构、RAG、工具调用和循环控制。",
+    "confidence_note": "适合补充常见题面，不是可确认的逐场面试记录。"
+  }
+]

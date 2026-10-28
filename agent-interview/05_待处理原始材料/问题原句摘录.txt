@@ -1,0 +1,40 @@
+以下是每个来源的一条原句短摘预览，不代表完整题目列表。完整公开可见的 AI / Agent 题目逐题转述见「AI与Agent题目列表_逐题转述.md」；原帖链接见「来源链接.txt」。
+
+https://www.nowcoder.com/discuss/922659809084571648
+短期记忆和长期记忆有什么区别？
+
+https://www.nowcoder.com/discuss/922643334898647040
+每一轮对话都要去做总结吗？
+
+https://www.nowcoder.com/feed/main/detail/122fd928ee824ed99c8f834233d1ac23
+RAG召回率低，可能是什么问题，怎么解决
+
+https://www.nowcoder.com/feed/main/detail/acc9c99b46e7489386bab12b47b56c11
+用于采集的查询问题如何构造
+
+https://www.nowcoder.com/feed/main/detail/dc1c9059306c4c38b0e2e095e8626c54
+个人 RAG 项目解决什么问题？
+
+https://www.nowcoder.com/discuss/932090060415987712
+Agent 究竟解决了一个什么问题？
+
+https://www.nowcoder.com/discuss/940029270502424576
+常见的上下文管理机制有哪些？
+
+https://www.nowcoder.com/discuss/930603646885122048
+什么是 Agent Loop？
+
+https://www.nowcoder.com/feed/main/detail/6cf457434a6a4cd9b1b9951cf1b6b513
+react和plan模式有什么区别？
+
+https://www.nowcoder.com/discuss/930603820395036672
+如何理解Agent中Harness的概念？
+
+https://www.nowcoder.com/discuss/931372614759481344
+RAG 的 Top-K 如何确定，为什么选择 6 或 8？
+
+https://www.nowcoder.com/discuss/928330146736537600
+单次LLM打分评判算不算Agent？
+
+https://www.nowcoder.com/discuss/929182554303787008
+Agent怎么实现不同任务的隔离？

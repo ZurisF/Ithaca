@@ -1,0 +1,4 @@
+[
+  {"id":"UNK01","company":"未披露（作者称中型 AI 设备研发公司）","role":"AI Agent 开发岗，5–10 年经验","round":"一面、二面","interview_date":"2026-06-17","source_title":"某中型 AI 设备研发 AI Agent 开发岗一二面面经（已拿 offer）","url":"https://ai.codefather.cn/post/2067118684236795905","source_type":"candidate_first_person_report","source_tier":1,"traceability":"岗位、面试轮次、日期和候选人经历明确；公司未披露","limitations":"原文声明回忆可能不完整；问题已做简洁转述。"},
+  {"id":"MULTI01","company":"多家公司，单题归属不明","role":"AI Agent 开发工程师（作者从 Java 后端转型；跨 20+ 场面试总结）","round":"跨公司问题归纳，无法映射到具体轮次","interview_date":"2025-08 至 2025-09（作者描述的面试周期）","source_title":"最近在面试 AI Agent 开发工程师！面经分享","url":"https://blog.csdn.net/weixin_43958728/article/details/152039160","source_type":"candidate_multi_interview_summary","source_tier":2,"traceability":"作者自述经历 20 多场面试并拿到字节、阿里、小红书等 offer；单个问题没有公司/轮次标签","limitations":"题目仅作为跨公司面试归纳，不得归因给文中提到的任一公司；部分页面内容受会员墙限制。"}
+]
