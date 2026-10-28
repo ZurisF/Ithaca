@@ -1,0 +1,214 @@
+"""Iterative evidence collection and bounded snapshot publication in Local Runtime."""
+
+import json
+import re
+import time
+from pathlib import Path
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from content_safety import ContentRejected, filter_text
+from local_project.errors import LocalError
+from local_project.inventory.repository_map import build_repository_map
+from local_project.inventory.walk import inventory
+from local_project.settings import get_settings
+from local_project.tools.project import ProjectTools
+from model_adapter import Message, ModelAdapter, ModelFailure, RetryPolicy
+
+PROMPT = Path(__file__).resolve().parents[5] / "packages/prompt_assets/prompts/observer/v1.md"
+CITATION = re.compile(r"`([^`\n]+):L\d+(?:-L\d+)?`")
+
+
+class ObserverStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal[
+        "list_tree",
+        "search_text",
+        "get_file_symbols",
+        "find_symbol_references",
+        "read_file_range",
+        "finish",
+    ]
+    path: str | None = None
+    query: str | None = None
+    first_line: int | None = Field(default=None, ge=1)
+    last_line: int | None = Field(default=None, ge=1)
+    markdown: str | None = None
+
+
+def _validate_snapshot(markdown: str, read_paths: set[str], *, partial: bool) -> list[str]:
+    errors = []
+    try:
+        safety = filter_text(markdown, max_chars=200_000)
+        if safety.changed:
+            errors.append("snapshot contains a sensitive value")
+    except ContentRejected:
+        return ["snapshot content is empty, unsafe or over budget"]
+    current_kind = None
+    sections: list[tuple[str, str, str]] = []
+    lines = markdown.splitlines()
+    start = None
+    seen = set()
+    headings = set()
+    for index, line in enumerate(lines):
+        if line.startswith("## "):
+            if start is not None:
+                kind, title, _ = sections[-1]
+                sections[-1] = (kind, title, "\n".join(lines[start:index]))
+                start = None
+            heading = line[3:].strip()
+            if heading in {"Modules", "Threads"}:
+                headings.add(heading)
+            current_kind = {"Modules": "module", "Threads": "thread"}.get(heading)
+        elif line.startswith("### ") and current_kind:
+            if start is not None:
+                kind, title, _ = sections[-1]
+                sections[-1] = (kind, title, "\n".join(lines[start:index]))
+            title = line[4:].strip()
+            key = (current_kind, title)
+            if not title or key in seen:
+                errors.append("empty or duplicate Module/Thread heading")
+            seen.add(key)
+            sections.append((current_kind, title, ""))
+            start = index + 1
+    if start is not None:
+        kind, title, _ = sections[-1]
+        sections[-1] = (kind, title, "\n".join(lines[start:]))
+    if headings != {"Modules", "Threads"}:
+        errors.append("snapshot needs both Modules and Threads headings")
+    if not sections:
+        errors.append("snapshot needs at least one evidence-backed Module or Thread")
+    cited = {match.group(1) for match in CITATION.finditer(markdown)}
+    if re.search(r":L\d+", CITATION.sub("", markdown)):
+        errors.append("file and line citations must be wrapped in backticks")
+    if not cited <= read_paths:
+        errors.append("snapshot cites a file that was not read through an authorized tool")
+    for kind, title, body in sections:
+        if not any(match.group(1) in read_paths for match in CITATION.finditer(body)):
+            errors.append(f"{kind} {title} needs an authorized file and line citation")
+    if partial and "部分分析" not in markdown:
+        errors.append("partial coverage must be disclosed as 部分分析")
+    return errors
+
+
+async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
+    settings = get_settings()
+    items, inventory_partial = inventory(root)
+    tools = ProjectTools(root, items)
+    if not tools.allowed:
+        raise LocalError(422, "source_file_rejected", "目录中没有可安全读取的材料。")
+    map_result = build_repository_map(
+        root,
+        items,
+        max_files=settings.observer_map_files,
+        max_chars=settings.observer_map_chars,
+        inventory_partial=inventory_partial,
+    )
+    messages = [
+        Message(role="system", content=PROMPT.read_text(encoding="utf-8")),
+        Message(
+            role="user",
+            content=json.dumps(
+                {
+                    "repository_map": map_result.text,
+                    "eligible_file_count": len(tools.allowed),
+                    "inventory_partial": inventory_partial,
+                    "map_partial": map_result.partial,
+                },
+                ensure_ascii=False,
+            ),
+        ),
+    ]
+    read_paths: set[str] = set()
+    seen_calls: set[str] = set()
+    partial = map_result.partial
+    total_chars = len(map_result.text)
+    deadline = time.monotonic() + settings.observer_timeout_seconds
+    tool_steps = 0
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 5:
+            raise LocalError(503, "observer_timeout", "目录观察已超过总耗时预算。")
+        must_finish = (
+            tool_steps >= settings.observer_tool_steps
+            or total_chars >= settings.observer_total_chars
+        )
+        if must_finish:
+            partial = True
+            messages.append(
+                Message(
+                    role="user",
+                    content="工具预算已到。下一步必须 finish，明确写部分分析与未覆盖范围。",
+                )
+            )
+
+        def validate(
+            step: ObserverStep, current_partial: bool = partial, finish_only: bool = must_finish
+        ) -> list[str]:
+            if step.action == "finish":
+                if step.markdown is None or not read_paths:
+                    return ["finish requires markdown and at least one actual file read"]
+                return _validate_snapshot(step.markdown, read_paths, partial=current_partial)
+            if finish_only:
+                return ["tool budget reached; action must be finish"]
+            if step.markdown is not None:
+                return ["tool action cannot include markdown"]
+            return []
+
+        try:
+            step = await model.generate_structured(
+                session_id=session_id,
+                operation="observer_step",
+                messages=messages,
+                output_schema=ObserverStep,
+                prompt_version="observer-v1",
+                retry_policy=RetryPolicy(max_attempts=2, deadline_seconds=min(45, remaining - 2)),
+                validate_output=validate,
+            )
+        except ModelFailure as exc:
+            if exc.code == "dependency_unavailable":
+                raise LocalError(503, "dependency_unavailable", "模型尚未配置。") from exc
+            raise LocalError(503, "observer_model_failed", "项目观察模型调用失败。") from exc
+        if validate(step):
+            raise LocalError(422, "observer_output_invalid", "项目观察结果未通过证据校验。")
+        if step.action == "finish":
+            assert step.markdown is not None
+            return filter_text(step.markdown).text
+
+        call_key = json.dumps(step.model_dump(exclude={"markdown"}), sort_keys=True)
+        if call_key in seen_calls:
+            partial = True
+            tool_steps = settings.observer_tool_steps
+            messages.append(
+                Message(role="user", content="重复工具请求没有新增证据。请结束并标记部分分析。")
+            )
+            continue
+        seen_calls.add(call_key)
+        tool_steps += 1
+        try:
+            result = tools.execute(
+                step.action,
+                path=step.path,
+                query=step.query,
+                first_line=step.first_line,
+                last_line=step.last_line,
+            )
+            if total_chars + len(result.text) > settings.observer_total_chars:
+                partial = True
+                tool_steps = settings.observer_tool_steps
+                tool_text = '{"truncated":true,"reason":"observer text budget"}'
+            else:
+                tool_text = result.text
+                total_chars += len(tool_text)
+                read_paths.update(result.read_paths)
+                partial = partial or result.truncated
+        except LocalError as exc:
+            tool_text = json.dumps({"error_code": exc.code}, ensure_ascii=False)
+        messages.extend(
+            [
+                Message(role="assistant", content=step.model_dump_json()),
+                Message(role="user", content=f"Tool result for {step.action}: {tool_text}"),
+            ]
+        )

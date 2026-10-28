@@ -1,0 +1,12 @@
+{
+  "topic_registry": "v1",
+  "planning_policy": "v1",
+  "templates": {
+    "project_overview": "v1",
+    "core_flow_deep_dive": "v1",
+    "cross_cutting": "v1",
+    "stress_interview": "v1",
+    "contribution_retrospective": "v1"
+  },
+  "prompts": {"planner": "v1"}
+}

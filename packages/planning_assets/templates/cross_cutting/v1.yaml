@@ -1,0 +1,11 @@
+{
+  "id": "cross_cutting", "version": "v1",
+  "stage_prototypes": [
+    {"title": "横切目标", "goal": "确认本次关注的质量属性和范围", "complete_when": "能说明它影响哪些组件"},
+    {"title": "现有机制", "goal": "梳理项目中对应实现和证据", "complete_when": "能指出真实机制及其边界"},
+    {"title": "一致性与权限", "goal": "检查跨组件状态与访问控制", "complete_when": "能解释失败和越权时的行为"},
+    {"title": "可观测与评测", "goal": "追问信号、指标和验证方法", "complete_when": "能说明如何发现退化"},
+    {"title": "故障处置", "goal": "讨论典型故障和恢复", "complete_when": "能给出有顺序的处置依据"},
+    {"title": "改进排序", "goal": "根据风险和成本确定下一步", "complete_when": "能说明优先级与验收方式"}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "stress_interview", "version": "v1",
+  "stage_prototypes": [
+    {"title": "关键假设", "goal": "找出项目依赖的主要假设", "complete_when": "能说明假设来源与证据"},
+    {"title": "证据挑战", "goal": "检验设计结论是否被数据支持", "complete_when": "能区分事实、推断和未知"},
+    {"title": "失败窗口", "goal": "讨论竞争、超时和部分失败", "complete_when": "能解释用户可见结果与恢复"},
+    {"title": "边界变化", "goal": "改变规模、预算或权限约束", "complete_when": "能重新评估原方案适用性"},
+    {"title": "替代设计", "goal": "审视更简单或更稳健的方案", "complete_when": "能比较代价和收益"},
+    {"title": "决策复盘", "goal": "在不确定性下给出改进顺序", "complete_when": "能说明实验与停止条件"}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "project_overview", "version": "v1",
+  "stage_prototypes": [
+    {"title": "项目定位", "goal": "确认用户问题、目标人群与项目边界", "complete_when": "能把问题、约束和成功标准连起来"},
+    {"title": "系统轮廓", "goal": "说明主要组件及职责", "complete_when": "能解释关键接口和数据流"},
+    {"title": "核心路径", "goal": "沿真实请求追踪主要链路", "complete_when": "能指出输入、处理和输出的证据"},
+    {"title": "关键取舍", "goal": "解释最重要的技术决策", "complete_when": "能说明备选方案与取舍依据"},
+    {"title": "质量与边界", "goal": "检查评测、故障和安全边界", "complete_when": "能说明已有证据及未覆盖风险"},
+    {"title": "个人贡献与复盘", "goal": "厘清个人工作与下一步改进", "complete_when": "能区分本人贡献、团队成果和待改进项"}
+  ]
+}

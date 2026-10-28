@@ -1,0 +1,1526 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Project Interview Lab Application",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/interviews": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Create Session",
+        "operationId": "create_session_v1_interviews_post",
+        "parameters": [
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "List Sessions",
+        "operationId": "list_sessions_v1_interviews_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummary"
+                  },
+                  "title": "Response List Sessions V1 Interviews Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_v1_interviews__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/snapshot:import": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Import Snapshot",
+        "operationId": "import_snapshot_v1_interviews__session_id__snapshot_import_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/snapshot:parse-ranges": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Parse Ranges",
+        "operationId": "parse_ranges_v1_interviews__session_id__snapshot_parse_ranges_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/snapshot:observe": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Observe Snapshot",
+        "operationId": "observe_snapshot_v1_interviews__session_id__snapshot_observe_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotObserveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/snapshot:append-user-opinion": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Append Opinion",
+        "operationId": "append_opinion_v1_interviews__session_id__snapshot_append_user_opinion_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserOpinionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/selection": {
+      "put": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Select Scope",
+        "operationId": "select_scope_v1_interviews__session_id__selection_put",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/snapshot.md": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Export Snapshot",
+        "operationId": "export_snapshot_v1_interviews__session_id__snapshot_md_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/plan:generate": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Generate Plan",
+        "operationId": "generate_plan_v1_interviews__session_id__plan_generate_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/plan": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Get Plan",
+        "operationId": "get_plan_v1_interviews__session_id__plan_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewPlan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/v1/model-traces": {
+      "post": {
+        "tags": [
+          "internal"
+        ],
+        "summary": "Ingest Model Trace",
+        "operationId": "ingest_model_trace_internal_v1_model_traces_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelTraceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Ingest Model Trace Internal V1 Model Traces Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/model-readiness": {
+      "get": {
+        "summary": "Model Readiness",
+        "operationId": "model_readiness_v1_model_readiness_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Model Readiness V1 Model Readiness Get"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "summary": "Current Identity",
+        "operationId": "current_identity_v1_me_get",
+        "parameters": [
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "title": "Response Current Identity V1 Me Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Direction": {
+        "type": "string",
+        "enum": [
+          "project_overview",
+          "core_flow_deep_dive",
+          "cross_cutting",
+          "stress_interview",
+          "contribution_retrospective"
+        ],
+        "title": "Direction"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail"
+      },
+      "ErrorEnvelope": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InterviewPlan": {
+        "properties": {
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/InterviewStage"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "template_version": {
+            "type": "string",
+            "title": "Template Version"
+          },
+          "topic_registry_version": {
+            "type": "string",
+            "title": "Topic Registry Version"
+          },
+          "planning_policy_version": {
+            "type": "string",
+            "title": "Planning Policy Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stages",
+          "template_id",
+          "template_version",
+          "topic_registry_version",
+          "planning_policy_version"
+        ],
+        "title": "InterviewPlan"
+      },
+      "InterviewStage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "goal": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "complete_when": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Complete When"
+          },
+          "topic_path": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Topic Path"
+          },
+          "section_refs": {
+            "items": {
+              "$ref": "#/components/schemas/SectionRef"
+            },
+            "type": "array",
+            "title": "Section Refs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "goal",
+          "complete_when",
+          "topic_path",
+          "section_refs"
+        ],
+        "title": "InterviewStage"
+      },
+      "ModelTraceRequest": {
+        "properties": {
+          "trace_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Trace Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "operation_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Operation Name"
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Model"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "attempt_no": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Attempt No"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finished At"
+          },
+          "latency_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Latency Ms"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "trace_id",
+          "session_id",
+          "operation_name",
+          "provider",
+          "model",
+          "status",
+          "attempt_no",
+          "started_at",
+          "finished_at",
+          "latency_ms"
+        ],
+        "title": "ModelTraceRequest"
+      },
+      "SectionRef": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "module",
+              "thread"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "SectionRef"
+      },
+      "SelectionRequest": {
+        "properties": {
+          "interview_direction": {
+            "$ref": "#/components/schemas/Direction"
+          },
+          "selected_sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionRef"
+            },
+            "type": "array",
+            "title": "Selected Sections"
+          },
+          "confirm_empty_range": {
+            "type": "boolean",
+            "title": "Confirm Empty Range",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "interview_direction",
+          "selected_sections"
+        ],
+        "title": "SelectionRequest"
+      },
+      "SessionStatus": {
+        "type": "string",
+        "enum": [
+          "preparing",
+          "interviewing",
+          "post_processing",
+          "completed",
+          "aborted"
+        ],
+        "title": "SessionStatus"
+      },
+      "SessionSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "interview_direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "termination_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminationReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "interview_direction",
+          "termination_reason",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SessionSummary"
+      },
+      "SessionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "interview_direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "termination_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminationReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "selected_sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionRef"
+            },
+            "type": "array",
+            "title": "Selected Sections"
+          },
+          "has_snapshot": {
+            "type": "boolean",
+            "title": "Has Snapshot"
+          },
+          "has_plan": {
+            "type": "boolean",
+            "title": "Has Plan"
+          },
+          "curation_review": {
+            "type": "boolean",
+            "title": "Curation Review"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "interview_direction",
+          "termination_reason",
+          "created_at",
+          "updated_at",
+          "selected_sections",
+          "has_snapshot",
+          "has_plan",
+          "curation_review",
+          "completed_at"
+        ],
+        "title": "SessionView"
+      },
+      "SnapshotImportRequest": {
+        "properties": {
+          "markdown": {
+            "type": "string",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Markdown"
+          },
+          "source_handle": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Handle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "markdown"
+        ],
+        "title": "SnapshotImportRequest"
+      },
+      "SnapshotObserveRequest": {
+        "properties": {
+          "source_handle": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source Handle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_handle"
+        ],
+        "title": "SnapshotObserveRequest"
+      },
+      "SnapshotView": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionRef"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "content",
+          "sections"
+        ],
+        "title": "SnapshotView"
+      },
+      "TerminationReason": {
+        "type": "string",
+        "enum": [
+          "normal",
+          "early_finish",
+          "forced_exit",
+          "safety_cap"
+        ],
+        "title": "TerminationReason"
+      },
+      "UserOpinionRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "UserOpinionRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

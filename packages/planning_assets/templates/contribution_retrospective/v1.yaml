@@ -1,0 +1,11 @@
+{
+  "id": "contribution_retrospective", "version": "v1",
+  "stage_prototypes": [
+    {"title": "职责边界", "goal": "厘清用户亲自负责的范围", "complete_when": "能区分本人和团队工作"},
+    {"title": "关键决策", "goal": "追问本人作出的工程判断", "complete_when": "能说明依据、备选和结果"},
+    {"title": "协作与交付", "goal": "理解接口协作和交付方式", "complete_when": "能说明冲突或变更如何处理"},
+    {"title": "结果证据", "goal": "验证产出和质量变化", "complete_when": "能提供可核验的指标或案例"},
+    {"title": "失误与学习", "goal": "复盘遇到的限制或失误", "complete_when": "能说明归因及修正"},
+    {"title": "下一轮改进", "goal": "确定可执行的后续动作", "complete_when": "能给出优先级和验证方式"}
+  ]
+}

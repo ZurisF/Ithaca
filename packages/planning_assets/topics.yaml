@@ -1,0 +1,20 @@
+{
+  "version": "v1",
+  "topics": [
+    {"path": "project_experience", "title": "项目经历"},
+    {"path": "system_design", "title": "系统设计"},
+    {"path": "agent", "title": "Agent 架构与规划"},
+    {"path": "agent.tools", "title": "工具调用与执行"},
+    {"path": "agent.memory", "title": "记忆与上下文"},
+    {"path": "intent", "title": "意图理解与路由"},
+    {"path": "rag", "title": "RAG 与知识库"},
+    {"path": "rag.chunking", "title": "切片"},
+    {"path": "rag.retrieval", "title": "检索"},
+    {"path": "rag.retrieval.reranking", "title": "重排"},
+    {"path": "model_prompt", "title": "模型、Prompt 与推理"},
+    {"path": "evaluation", "title": "评测与迭代"},
+    {"path": "storage_observability", "title": "存储、服务端与可观测性"},
+    {"path": "security", "title": "安全、权限与人工接管"},
+    {"path": "coding_agent", "title": "Coding Agent 与开发工具"}
+  ]
+}

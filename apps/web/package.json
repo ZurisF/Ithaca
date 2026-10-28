@@ -1,0 +1,25 @@
+{
+  "name": "project-interview-lab-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "generate:api": "openapi-typescript ../../packages/api_contract/openapi.json -o src/generated/api.ts"
+  },
+  "dependencies": {
+    "next": "^16.0.0",
+    "openapi-fetch": "^0.17.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.9.0"
+  }
+}

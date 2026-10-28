@@ -1,0 +1,42 @@
+[project]
+name = "project-interview-lab"
+version = "0.1.0"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+  "alembic>=1.16,<2",
+  "asyncpg>=0.30,<1",
+  "fastapi>=0.116,<1",
+  "httpx[socks]>=0.28,<1",
+  "pathspec>=0.12,<1",
+  "pydantic-settings>=2.10,<3",
+  "redis>=6,<8",
+  "sqlalchemy[asyncio]>=2.0.40,<3",
+  "uvicorn>=0.35,<1",
+]
+
+[build-system]
+requires = ["setuptools>=80,<82"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app", "local_project", "content_safety", "model_adapter"]
+package-dir = {app = "services/application/src/app", local_project = "services/local_project/src/local_project", content_safety = "packages/content_safety/src/content_safety", model_adapter = "packages/model_adapter/src/model_adapter"}
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
+pythonpath = ["services/application/src", "services/local_project/src", "packages/content_safety/src", "packages/model_adapter/src"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["services/application/src", "services/local_project/src", "packages/content_safety/src", "packages/model_adapter/src"]

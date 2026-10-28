@@ -1,0 +1,11 @@
+{
+  "id": "core_flow_deep_dive", "version": "v1",
+  "stage_prototypes": [
+    {"title": "链路事实", "goal": "确认选定流程的起点、终点和实际实现", "complete_when": "能沿证据走通一次真实请求"},
+    {"title": "设计动机", "goal": "解释核心步骤为何这样设计", "complete_when": "能关联需求、约束和取舍"},
+    {"title": "数据与状态", "goal": "追问状态、数据和边界条件", "complete_when": "能说明一致性与失败时的行为"},
+    {"title": "替代方案", "goal": "比较至少一种可行实现", "complete_when": "能说明适用条件与成本"},
+    {"title": "故障与验证", "goal": "检查异常路径和质量证据", "complete_when": "能给出测试或观测依据"},
+    {"title": "规模变化与复盘", "goal": "讨论约束变化后的改造", "complete_when": "能提出与当前架构相容的改进"}
+  ]
+}
