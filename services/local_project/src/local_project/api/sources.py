@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from local_project.inventory.walk import inventory
 from local_project.observability.trace import trace_sink
 from local_project.observer.run import observe
+from local_project.observer.tasks import observer_tasks
 from local_project.settings import get_settings
 from local_project.source_registry.registry import registry
 from model_adapter import ModelAdapter, OpenAICompatibleAdapter
@@ -58,7 +59,12 @@ def make_router(token_dependency) -> APIRouter:
         model: Annotated[ModelAdapter, Depends(get_observer_model)],
     ) -> dict[str, str]:
         root = registry.get(source_handle, body.session_id)
-        markdown = await observe(root, body.session_id, model)
+        markdown = await observer_tasks.run(
+            body.operation_id,
+            body.session_id,
+            source_handle,
+            lambda: observe(root, body.session_id, model),
+        )
         return {"operation_id": str(body.operation_id), "snapshot": markdown}
 
     @router.delete("/v1/sources/{source_handle}")

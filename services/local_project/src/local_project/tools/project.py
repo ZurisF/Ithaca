@@ -26,6 +26,7 @@ def _encode(payload: dict) -> tuple[str, bool]:
 class ToolResult:
     text: str
     read_paths: frozenset[str]
+    evidence_lines: dict[str, frozenset[int]]
     truncated: bool
 
 
@@ -62,7 +63,7 @@ class ProjectTools:
             or item.relative_path.startswith(prefix + "/")
         ]
         body, clipped = _encode({"entries": entries[:100], "truncated": len(entries) > 100})
-        return ToolResult(body, frozenset(), clipped or len(entries) > 100)
+        return ToolResult(body, frozenset(), {}, clipped or len(entries) > 100)
 
     def read_range(
         self, path: str | None, first_line: int | None, last_line: int | None
@@ -74,14 +75,25 @@ class ProjectTools:
         body, clipped = _encode(
             {"path": chosen, "first_line": first_line, "last_line": last_line, "content": content},
         )
-        return ToolResult(body, frozenset({chosen}), clipped)
+        visible_lines = len(content.splitlines())
+        evidence = (
+            {chosen: frozenset(range(first_line, first_line + visible_lines))}
+            if visible_lines and not clipped
+            else {}
+        )
+        return ToolResult(body, frozenset({chosen}), evidence, clipped)
 
     def get_symbols(self, path: str | None) -> ToolResult:
         chosen = self._safe_path(path, exact=True)
         content = read_file_text(self.root, chosen)
         symbols = [asdict(item) for item in file_symbols(chosen, content)]
         body, clipped = _encode({"path": chosen, "symbols": symbols})
-        return ToolResult(body, frozenset({chosen}), clipped)
+        evidence = (
+            {chosen: frozenset(symbol["line"] for symbol in symbols)}
+            if symbols and not clipped
+            else {}
+        )
+        return ToolResult(body, frozenset({chosen}), evidence, clipped)
 
     def search(self, query: str | None, path_filter: str | None, *, whole_word: bool) -> ToolResult:
         if not query or len(query) > 100 or any(ord(char) < 32 for char in query):
@@ -112,7 +124,16 @@ class ProjectTools:
                 break
         truncated = len(candidates) > MAX_SEARCH_FILES or len(matches) >= MAX_MATCHES
         body, clipped = _encode({"matches": matches, "truncated": truncated})
-        return ToolResult(body, frozenset(read_paths), truncated or clipped)
+        evidence: dict[str, set[int]] = {}
+        if not clipped:
+            for match in matches:
+                evidence.setdefault(match["path"], set()).add(match["line"])
+        return ToolResult(
+            body,
+            frozenset(read_paths),
+            {path: frozenset(lines) for path, lines in evidence.items()},
+            truncated or clipped,
+        )
 
     def execute(
         self,

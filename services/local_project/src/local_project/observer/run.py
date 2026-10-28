@@ -18,7 +18,7 @@ from local_project.tools.project import ProjectTools
 from model_adapter import Message, ModelAdapter, ModelFailure, RetryPolicy
 
 PROMPT = Path(__file__).resolve().parents[5] / "packages/prompt_assets/prompts/observer/v1.md"
-CITATION = re.compile(r"`([^`\n]+):L\d+(?:-L\d+)?`")
+CITATION = re.compile(r"`([^`\n]+):L(\d+)(?:-L(\d+))?`")
 
 
 class ObserverStep(BaseModel):
@@ -38,7 +38,9 @@ class ObserverStep(BaseModel):
     markdown: str | None = None
 
 
-def _validate_snapshot(markdown: str, read_paths: set[str], *, partial: bool) -> list[str]:
+def _validate_snapshot(
+    markdown: str, evidence_lines: dict[str, set[int]], *, partial: bool
+) -> list[str]:
     errors = []
     try:
         safety = filter_text(markdown, max_chars=200_000)
@@ -80,14 +82,22 @@ def _validate_snapshot(markdown: str, read_paths: set[str], *, partial: bool) ->
         errors.append("snapshot needs both Modules and Threads headings")
     if not sections:
         errors.append("snapshot needs at least one evidence-backed Module or Thread")
-    cited = {match.group(1) for match in CITATION.finditer(markdown)}
+    citations = list(CITATION.finditer(markdown))
     if re.search(r":L\d+", CITATION.sub("", markdown)):
         errors.append("file and line citations must be wrapped in backticks")
-    if not cited <= read_paths:
-        errors.append("snapshot cites a file that was not read through an authorized tool")
+    for match in citations:
+        path = match.group(1)
+        first = int(match.group(2))
+        last = int(match.group(3) or first)
+        if (
+            last < first
+            or last - first > 200
+            or not set(range(first, last + 1)) <= evidence_lines.get(path, set())
+        ):
+            errors.append("snapshot cites file lines not visible in an authorized tool result")
     for kind, title, body in sections:
-        if not any(match.group(1) in read_paths for match in CITATION.finditer(body)):
-            errors.append(f"{kind} {title} needs an authorized file and line citation")
+        if not any(CITATION.finditer(body)):
+            errors.append(f"{kind} {title} needs a file and line citation")
     if partial and "部分分析" not in markdown:
         errors.append("partial coverage must be disclosed as 部分分析")
     return errors
@@ -121,7 +131,7 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
             ),
         ),
     ]
-    read_paths: set[str] = set()
+    evidence_lines: dict[str, set[int]] = {}
     seen_calls: set[str] = set()
     partial = map_result.partial
     total_chars = len(map_result.text)
@@ -148,9 +158,9 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
             step: ObserverStep, current_partial: bool = partial, finish_only: bool = must_finish
         ) -> list[str]:
             if step.action == "finish":
-                if step.markdown is None or not read_paths:
+                if step.markdown is None or not evidence_lines:
                     return ["finish requires markdown and at least one actual file read"]
-                return _validate_snapshot(step.markdown, read_paths, partial=current_partial)
+                return _validate_snapshot(step.markdown, evidence_lines, partial=current_partial)
             if finish_only:
                 return ["tool budget reached; action must be finish"]
             if step.markdown is not None:
@@ -202,7 +212,8 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
             else:
                 tool_text = result.text
                 total_chars += len(tool_text)
-                read_paths.update(result.read_paths)
+                for path, lines in result.evidence_lines.items():
+                    evidence_lines.setdefault(path, set()).update(lines)
                 partial = partial or result.truncated
         except LocalError as exc:
             tool_text = json.dumps({"error_code": exc.code}, ensure_ascii=False)
