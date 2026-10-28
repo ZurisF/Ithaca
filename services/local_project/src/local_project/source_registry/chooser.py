@@ -20,17 +20,24 @@ async def choose_directory() -> str:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, _stderr = await asyncio.wait_for(
+        stdout, stderr = await asyncio.wait_for(
             process.communicate(), timeout=PICKER_TIMEOUT_SECONDS
         )
     except TimeoutError as exc:
         process.terminate()
         await process.wait()
         raise LocalError(408, "source_picker_timeout", "目录选择已超时。") from exc
+    except asyncio.CancelledError:
+        if process.returncode is None:
+            process.terminate()
+            await process.wait()
+        raise
     except OSError as exc:
         raise LocalError(503, "source_picker_unavailable", "本地目录选择器无法启动。") from exc
     if process.returncode != 0:
-        raise LocalError(409, "source_picker_cancelled", "未选择目录。")
+        if b"(-128)" in stderr:
+            raise LocalError(409, "source_picker_cancelled", "未选择目录。")
+        raise LocalError(503, "source_picker_unavailable", "本地目录选择器无法完成。")
     path = stdout.decode("utf-8", errors="strict").strip()
     if not path:
         raise LocalError(409, "source_picker_cancelled", "未选择目录。")

@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Gate 0 工程可启动 | 已通过本机验收 | Python、Node 锁文件；PostgreSQL/pgvector 与 Redis Compose；两个 Runtime `/health`；Web 页面；无模型密钥启动与明确 503；开发 User/Administrator 身份；结构化应用日志。 |
 | Gate 1 合同、迁移与存储 | 已通过本机验收 | 核心 schema 在一次性空库完成 upgrade、downgrade、re-upgrade；数据库直接拒绝非法状态组合、turn 101、第二个未回答 turn、答题时间错配、重复自然键和非 opaque source handle。准备流程 repository 使用同一短事务；Pydantic/OpenAPI/TypeScript 合同已生成并通过 Web 编译。后续业务的事务 seam 按修订施工书归入各自 Gate。 |
-| Gate 2 准备流程 | 实现完成，验收待复测 | 公开 HTTP 与 Web 已接入创建、Markdown 导入、macOS 本机目录选择、清单/脱敏位置、观察、范围、选择和计划；快照变化清空方向/范围/计划，同内容及同选择重放保留计划。Local handle 绑定 session；只读工具、Repository Map、迭代 Observer、预算与逐行引用校验已实现；Planner 经确定性校验后条件发布。受控测试通过，真实 Planner、Observer 和双 Runtime 观察链路此前用合成材料通过；本轮模型渠道返回 502/503，新增 token 上限后的真实回放和原生目录选择器手工操作尚未重新验收。 |
+| Gate 2 准备流程 | 代码与真实模型链路已验收；原生选择器手工核验后补 | 公开 HTTP 与 Web 已接入创建、Markdown 导入、macOS 本机目录选择、清单/脱敏位置、观察、范围、选择和计划；快照变化清空方向/范围/计划，同内容及同选择重放保留计划。Local handle 绑定 session；只读工具、Repository Map、迭代 Observer、预算与逐行引用校验已实现；Planner 经确定性校验后条件发布。受控测试、真实 Planner、真实 Observer 和双 Runtime 观察链路均已通过固定合成材料。用户要求把原生选择器的手工核验留到以后。 |
 | Gate 3～7 | 未完成 | 题库导入/检索、面试 Graph、断线恢复、赛后、策展、删除、完整 Web 和故障窗口回归尚未验收。 |
 
 ## 最近验证
@@ -16,12 +16,12 @@
 - `ruff check .`、`ruff format --check services packages tests scripts`、`git diff --check` 通过。
 - `pytest -q --tb=short`：48 passed，5 skipped；一次性测试库迁移往返另行通过。跳过项是需显式开启的真实模型或跨进程测试。
 - OpenAPI 与 Web TypeScript 客户端已重新生成；`npm run build --prefix apps/web` 通过。
-- 真实模型沿本机代理调用。本轮 Planner 收到渠道 502/503，Observer 收到 503；均返回明确依赖错误，没有发布半成品计划或快照。此前成功的真实模型与跨 Runtime 回放证据仍有效，但不能替代新增预算参数的复测。
+- 新模型渠道沿本机代理调用：真实 Planner 1 passed，真实 Observer 1 passed，双 Runtime 的 handle 隔离和真实观察 2 passed。新增 `max_completion_tokens` 参数已在真实 Observer 调用中通过。
 - Web 和两个 Runtime 均可启动且健康检查通过。Codex 内置浏览器会拦截跨端口的本机 8100 请求，故本轮未把新目录选择页面记为手工通过。
 
 ## 接下来的施工依赖
 
-1. Gate 2 待渠道恢复后，用固定合成材料复测真实 Observer 的 token 上限和双 Runtime 观察，并在普通浏览器手工操作一次原生目录选择器。本地 operation ID 只在当前进程内短期合并重复观察；重启后可再次调用模型，业务发布仍由 Application 的内容比较与条件写入保障。
+1. Gate 2 的原生目录选择器手工核验依用户要求后补。本地 operation ID 只在当前进程内短期合并重复观察；重启后可再次调用模型，业务发布仍由 Application 的内容比较与条件写入保障。
 2. 依 Gate 3 导入 11 个白名单题库文件，落地检索与首题发布；继续补齐当前需要的事务 seam。
 3. 依 Gate 4～7 实现面试、恢复、终止、赛后、策展、删除和正式 Web，并逐项映射 `tests/fault_windows`。
 
