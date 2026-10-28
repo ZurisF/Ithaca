@@ -47,6 +47,17 @@ curl -H 'X-Dev-User: 00000000-0000-4000-8000-000000000001' http://127.0.0.1:8100
 
 目录授权保存在 Local Runtime 进程内，服务重启或授权到期后需重新选择目录。Local Runtime 或模型渠道不可用时，仍可通过 Markdown 导入继续准备。快照内容变化会清空旧方向、范围和计划；没有解析出 Module/Thread 时，须在页面明确确认使用整份 Markdown。
 
+## 题库种子导入
+
+题库脚本只读取 `agent-interview/按考点/README.md` 列出的 11 个直接主题文件。先核对源数据，再使用 BGE-M3 生成向量并写入单一题库：
+
+```sh
+uv run --extra embedding python scripts/import_question_bank.py --dry-run
+uv run --extra embedding python scripts/import_question_bank.py
+```
+
+已有本机模型快照时，可给第二条命令传 `--model-path /path/to/bge-m3-snapshot`。导入按题目正文精确去重，不覆盖已经存在的题目；完成后核对每条种子题的向量和全文索引。当前 11 个文件有 573 条一级题目、537 条不同正文。
+
 ## 校验
 
 ```sh
@@ -70,6 +81,6 @@ uv run alembic -c services/application/alembic.ini upgrade head
 
 ## 施工进度
 
-具体完成项、验证记录和剩余范围见 [CONSTRUCTION_STATUS.md](CONSTRUCTION_STATUS.md)。Gate 1 已通过本机验收。Gate 2 的准备流程代码、真实模型和双 Runtime 链路已通过合成材料验证；原生目录选择器的手工核验依用户要求后补。Gate 3～7 尚未完成，实时面试、赛后、策展、删除和完整故障回归不可用于真实项目。
+具体完成项、验证记录和剩余范围见 [CONSTRUCTION_STATUS.md](CONSTRUCTION_STATUS.md)。Gate 1 已通过本机验收。Gate 2 的准备流程代码、真实模型和双 Runtime 链路已通过合成材料验证；原生目录选择器的手工核验依用户要求后补。Gate 3 的题库种子导入已完成，检索与首题尚未实现；实时面试、赛后、策展、删除和完整故障回归不可用于真实项目。
 
 进度按实际通过的验收门更新，不以启动成功或页面存在代替业务完成。产品行为以 `PRODUCT_DEVELOPMENT.md`、`IMPLEMENTATION_DESIGN.md` 为准。

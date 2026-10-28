@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "file_topics": {
+    "项目经历与系统设计.md": "project_experience",
+    "Agent架构_规划与多Agent.md": "agent",
+    "用户意图理解与查询路由.md": "intent",
+    "工具调用与任务执行.md": "agent.tools",
+    "记忆_上下文与对话状态.md": "agent.memory",
+    "RAG_检索与知识库.md": "rag",
+    "模型_Prompt与推理.md": "model_prompt",
+    "评测_质量与迭代.md": "evaluation",
+    "数据存储_服务端与可观测性.md": "storage_observability",
+    "安全_权限与人工接管.md": "security",
+    "CodingAgent与开发工具.md": "coding_agent"
+  }
+}

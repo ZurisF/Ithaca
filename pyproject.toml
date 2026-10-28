@@ -14,12 +14,18 @@ dependencies = [
   "uvicorn>=0.35,<1",
 ]
 
+[project.optional-dependencies]
+embedding = [
+    "flagembedding>=1.3,<2",
+    "jieba>=0.42,<1",
+]
+
 [build-system]
 requires = ["setuptools>=80,<82"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["app", "local_project", "content_safety", "model_adapter"]
+packages = ["app", "app.bank", "local_project", "content_safety", "model_adapter"]
 package-dir = {app = "services/application/src/app", local_project = "services/local_project/src/local_project", content_safety = "packages/content_safety/src/content_safety", model_adapter = "packages/model_adapter/src/model_adapter"}
 
 [dependency-groups]
