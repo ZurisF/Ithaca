@@ -29,6 +29,7 @@ from app.repositories import interview as repo
 from app.repositories import prepare as prepare_repo
 from app.services.errors import AppError
 from app.services.interview_checkpoint import (
+    delete_checkpoint,
     execution_lock,
     notify_current_changed,
     read_checkpoint,
@@ -282,13 +283,9 @@ async def _publish_decision(
             return False
         if decision.plan_action == "continue":
             if trigger.next_turn_no > 100:
-                results = await repo.stage_results(db, session_id)
-                await repo.terminate_interview(
-                    db,
-                    session_id,
-                    "safety_cap",
-                    any(item["result"] == "complete" for item in results),
-                )
+                from app.services.finalization import terminate_locked
+
+                await terminate_locked(db, session_id, "safety_cap")
                 return True
             question_id = exact_question_id(
                 decision.question or "",
@@ -316,7 +313,9 @@ async def _publish_decision(
             decision.interviewer_message,
         )
         if published and trigger.stage_index == len(plan.stages) - 1:
-            await repo.terminate_interview(db, session_id, "normal", True)
+            from app.services.finalization import terminate_locked
+
+            await terminate_locked(db, session_id, "normal")
         return published
 
 
@@ -510,6 +509,14 @@ async def _run_decisions(
                 await write_checkpoint(session_id, awaiting="answer")
             except Exception:  # noqa: BLE001 - PG turn is authoritative
                 logger.warning("interview_checkpoint_write_failed_after_publish")
+            await _notify(session_id)
+            return {"route": "stop"}
+        current = await get_current_view(db, identity, session_id)
+        if current.session.status != "interviewing":
+            try:
+                await delete_checkpoint(session_id)
+            except Exception:  # noqa: BLE001 - terminal PG status is authoritative
+                logger.warning("terminal_checkpoint_delete_failed")
             await _notify(session_id)
             return {"route": "stop"}
         await write_checkpoint(session_id, awaiting="processing")
@@ -726,7 +733,14 @@ async def resolve_snapshot_correction(
             if decision.plan_action == "continue" and trigger.next_turn_no <= 100:
                 await write_checkpoint(session_id, awaiting="answer")
             else:
-                await write_checkpoint(session_id, awaiting="processing")
+                current = await get_current_view(db, identity, session_id)
+                if current.session.status != "interviewing":
+                    try:
+                        await delete_checkpoint(session_id)
+                    except Exception:  # noqa: BLE001
+                        logger.warning("terminal_checkpoint_delete_failed")
+                else:
+                    await write_checkpoint(session_id, awaiting="processing")
             await _notify(session_id)
             if decision.plan_action != "continue":
                 return await _run_decisions(db, identity, session_id, model, retriever)

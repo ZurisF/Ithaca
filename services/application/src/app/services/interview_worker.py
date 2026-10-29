@@ -8,8 +8,10 @@ from app.api.model_dependency import get_model_adapter
 from app.bank.retrieval import get_retriever
 from app.db import session_factory
 from app.domain.access import Identity
+from app.repositories.finalization import worker_candidates
 from app.repositories.interview import recoverable_sessions
 from app.services.errors import AppError
+from app.services.finalization import run_finalization, settle
 from app.services.interview import _active_interrupt, _load_context, _run_decisions
 from app.services.interview_checkpoint import execution_lock, read_checkpoint
 from app.settings import get_settings
@@ -19,11 +21,27 @@ logger = logging.getLogger(__name__)
 
 async def recover_once() -> int:
     settings = get_settings()
+    async with session_factory() as db, db.begin():
+        terminal = await worker_candidates(db)
+    recovered = 0
+    for item in terminal:
+        session_id = item["id"]
+        try:
+            if item["status"] != "post_processing":
+                await settle(session_id)
+            elif settings.model_api_key and settings.model_name:
+                async with execution_lock(session_id):
+                    await run_finalization(session_id, get_model_adapter())
+            recovered += 1
+        except AppError as exc:
+            if exc.code != "operation_in_progress":
+                logger.warning("finalization_recovery_failed code=%s", exc.code)
+        except Exception:  # noqa: BLE001 - isolate each session
+            logger.warning("finalization_recovery_failed")
     if not settings.model_api_key or not settings.model_name:
-        return 0
+        return recovered
     async with session_factory() as db, db.begin():
         candidates = await recoverable_sessions(db)
-    recovered = 0
     for item in candidates:
         session_id = item["id"]
         try:

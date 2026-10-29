@@ -165,8 +165,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Export Snapshot */
-        get: operations["export_snapshot_v1_interviews__session_id__snapshot_md_get"];
+        /** Snapshot Markdown */
+        get: operations["snapshot_markdown_v1_interviews__session_id__snapshot_md_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -294,6 +294,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interviews/{session_id}/finish-early": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish Early */
+        post: operations["finish_early_v1_interviews__session_id__finish_early_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/force-exit:confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Force Exit */
+        post: operations["force_exit_v1_interviews__session_id__force_exit_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/turns/{turn_no}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Feedback */
+        put: operations["feedback_v1_interviews__session_id__turns__turn_no__feedback_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/full-qa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full Qa */
+        get: operations["full_qa_v1_interviews__session_id__full_qa_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/full-qa.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full Qa Markdown */
+        get: operations["full_qa_markdown_v1_interviews__session_id__full_qa_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report */
+        get: operations["report_v1_interviews__session_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/report.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Markdown */
+        get: operations["report_markdown_v1_interviews__session_id__report_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/interviews/{session_id}/events": {
         parameters: {
             query?: never;
@@ -402,6 +521,13 @@ export interface components {
             /** Edited Text */
             edited_text?: string | null;
         };
+        /** Dimension */
+        Dimension: {
+            /** Score */
+            score: number;
+            /** Analysis */
+            analysis: string;
+        };
         /**
          * Direction
          * @enum {string}
@@ -422,6 +548,26 @@ export interface components {
         /** ErrorEnvelope */
         ErrorEnvelope: {
             error: components["schemas"]["ErrorDetail"];
+        };
+        /** FeedbackRequest */
+        FeedbackRequest: {
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "upvote" | "downvote";
+            /** Reason */
+            reason?: ("重复" | "不相关" | "表述不清" | "其他") | null;
+        };
+        /** FeedbackView */
+        FeedbackView: {
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "upvote" | "downvote";
+            /** Reason */
+            reason: ("重复" | "不相关" | "表述不清" | "其他") | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -532,6 +678,49 @@ export interface components {
             kind: string;
             /** Line */
             line: number;
+        };
+        /** Report */
+        Report: {
+            /** Overall */
+            overall: string;
+            /** Dimensions */
+            dimensions: {
+                [key: string]: components["schemas"]["Dimension"];
+            };
+            /** Project Recommendations */
+            project_recommendations: string;
+            /** Training Recommendations */
+            training_recommendations: string;
+        };
+        /** ResultTurn */
+        ResultTurn: {
+            /** Turn No */
+            turn_no: number;
+            /** Stage Index */
+            stage_index: number;
+            /** Question */
+            question: string;
+            /** Answer */
+            answer: string | null;
+            /** Interviewer Message */
+            interviewer_message: string | null;
+            /** Project Answer */
+            project_answer: string | null;
+            /** Ideal Answer */
+            ideal_answer: string | null;
+            /** Comment */
+            comment: string | null;
+            feedback: components["schemas"]["FeedbackView"] | null;
+        };
+        /** ResultView */
+        ResultView: {
+            session: components["schemas"]["SessionView"];
+            plan: components["schemas"]["InterviewPlan"] | null;
+            /** Turns */
+            turns: components["schemas"]["ResultTurn"][];
+            report: components["schemas"]["Report"] | null;
+            /** Processing Incomplete */
+            processing_incomplete: boolean;
         };
         /** SectionRef */
         SectionRef: {
@@ -1060,7 +1249,7 @@ export interface operations {
             };
         };
     };
-    export_snapshot_v1_interviews__session_id__snapshot_md_get: {
+    snapshot_markdown_v1_interviews__session_id__snapshot_md_get: {
         parameters: {
             query?: never;
             header?: {
@@ -1319,6 +1508,242 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InterviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_early_v1_interviews__session_id__finish_early_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    force_exit_v1_interviews__session_id__force_exit_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    feedback_v1_interviews__session_id__turns__turn_no__feedback_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+                turn_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    full_qa_v1_interviews__session_id__full_qa_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    full_qa_markdown_v1_interviews__session_id__full_qa_md_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_v1_interviews__session_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_markdown_v1_interviews__session_id__report_md_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
                 };
             };
             /** @description Validation Error */

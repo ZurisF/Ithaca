@@ -15,6 +15,14 @@ def checkpoint_key(session_id: UUID) -> str:
     return f"interview:{session_id}:checkpoint"
 
 
+async def delete_checkpoint(session_id: UUID) -> None:
+    redis = Redis.from_url(get_settings().redis_url)
+    try:
+        await redis.delete(checkpoint_key(session_id))
+    finally:
+        await redis.aclose()
+
+
 async def read_checkpoint(session_id: UUID) -> dict | None:
     redis = Redis.from_url(get_settings().redis_url)
     try:

@@ -172,3 +172,76 @@ class InterviewView(StrictModel):
     awaiting: Literal["answer", "snapshot_confirmation", "decision_retry"] | None
     pending_correction: str | None
     last_error_code: str | None
+
+
+class ProjectAnswerItem(StrictModel):
+    turn_no: int = Field(ge=1, le=100)
+    project_answer: str = Field(min_length=1)
+
+
+class ProjectAnswers(StrictModel):
+    post_verification_append: str | None = None
+    answers: list[dict] = Field(max_length=100)
+
+
+class IdealAnswer(StrictModel):
+    ideal_answer: str = Field(min_length=1)
+
+
+class TurnEvaluation(StrictModel):
+    comment: str = Field(min_length=1)
+
+
+class Dimension(StrictModel):
+    score: int = Field(ge=0, le=5)
+    analysis: str
+
+
+class Report(StrictModel):
+    overall: str
+    dimensions: dict[
+        Literal[
+            "requirements_understanding",
+            "system_design",
+            "technical_depth",
+            "engineering_quality",
+            "failure_thinking",
+            "data_awareness",
+            "communication_structure",
+            "retrospection",
+        ],
+        Dimension,
+    ]
+    project_recommendations: str
+    training_recommendations: str
+
+    @model_validator(mode="after")
+    def all_dimensions(self) -> "Report":
+        if len(self.dimensions) != 8:
+            raise ValueError("report requires all eight dimensions")
+        return self
+
+
+class FeedbackView(StrictModel):
+    value: Literal["upvote", "downvote"]
+    reason: Literal["重复", "不相关", "表述不清", "其他"] | None
+
+
+class ResultTurn(StrictModel):
+    turn_no: int
+    stage_index: int
+    question: str
+    answer: str | None
+    interviewer_message: str | None
+    project_answer: str | None
+    ideal_answer: str | None
+    comment: str | None
+    feedback: FeedbackView | None
+
+
+class ResultView(StrictModel):
+    session: SessionView
+    plan: InterviewPlan | None
+    turns: list[ResultTurn]
+    report: Report | None
+    processing_incomplete: bool

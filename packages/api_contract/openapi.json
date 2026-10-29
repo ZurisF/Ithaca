@@ -666,8 +666,8 @@
         "tags": [
           "interviews"
         ],
-        "summary": "Export Snapshot",
-        "operationId": "export_snapshot_v1_interviews__session_id__snapshot_md_get",
+        "summary": "Snapshot Markdown",
+        "operationId": "snapshot_markdown_v1_interviews__session_id__snapshot_md_get",
         "parameters": [
           {
             "name": "session_id",
@@ -1153,6 +1153,438 @@
         }
       }
     },
+    "/v1/interviews/{session_id}/finish-early": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Finish Early",
+        "operationId": "finish_early_v1_interviews__session_id__finish_early_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/force-exit:confirm": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Force Exit",
+        "operationId": "force_exit_v1_interviews__session_id__force_exit_confirm_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/turns/{turn_no}/feedback": {
+      "put": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Feedback",
+        "operationId": "feedback_v1_interviews__session_id__turns__turn_no__feedback_put",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "turn_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Turn No"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/full-qa": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Full Qa",
+        "operationId": "full_qa_v1_interviews__session_id__full_qa_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/full-qa.md": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Full Qa Markdown",
+        "operationId": "full_qa_markdown_v1_interviews__session_id__full_qa_md_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/report": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Report",
+        "operationId": "report_v1_interviews__session_id__report_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/report.md": {
+      "get": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Report Markdown",
+        "operationId": "report_markdown_v1_interviews__session_id__report_md_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/interviews/{session_id}/events": {
       "get": {
         "tags": [
@@ -1446,6 +1878,27 @@
         ],
         "title": "CorrectionRequest"
       },
+      "Dimension": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "analysis": {
+            "type": "string",
+            "title": "Analysis"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "score",
+          "analysis"
+        ],
+        "title": "Dimension"
+      },
       "Direction": {
         "type": "string",
         "enum": [
@@ -1491,6 +1944,76 @@
           "error"
         ],
         "title": "ErrorEnvelope"
+      },
+      "FeedbackRequest": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "upvote",
+              "downvote"
+            ],
+            "title": "Value"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "重复",
+                  "不相关",
+                  "表述不清",
+                  "其他"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "FeedbackRequest"
+      },
+      "FeedbackView": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "upvote",
+              "downvote"
+            ],
+            "title": "Value"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "重复",
+                  "不相关",
+                  "表述不清",
+                  "其他"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "reason"
+        ],
+        "title": "FeedbackView"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1866,6 +2389,193 @@
           "line"
         ],
         "title": "RedactionHit"
+      },
+      "Report": {
+        "properties": {
+          "overall": {
+            "type": "string",
+            "title": "Overall"
+          },
+          "dimensions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Dimension"
+            },
+            "propertyNames": {
+              "enum": [
+                "requirements_understanding",
+                "system_design",
+                "technical_depth",
+                "engineering_quality",
+                "failure_thinking",
+                "data_awareness",
+                "communication_structure",
+                "retrospection"
+              ]
+            },
+            "type": "object",
+            "title": "Dimensions"
+          },
+          "project_recommendations": {
+            "type": "string",
+            "title": "Project Recommendations"
+          },
+          "training_recommendations": {
+            "type": "string",
+            "title": "Training Recommendations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "overall",
+          "dimensions",
+          "project_recommendations",
+          "training_recommendations"
+        ],
+        "title": "Report"
+      },
+      "ResultTurn": {
+        "properties": {
+          "turn_no": {
+            "type": "integer",
+            "title": "Turn No"
+          },
+          "stage_index": {
+            "type": "integer",
+            "title": "Stage Index"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "interviewer_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviewer Message"
+          },
+          "project_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Answer"
+          },
+          "ideal_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Answer"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "turn_no",
+          "stage_index",
+          "question",
+          "answer",
+          "interviewer_message",
+          "project_answer",
+          "ideal_answer",
+          "comment",
+          "feedback"
+        ],
+        "title": "ResultTurn"
+      },
+      "ResultView": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/SessionView"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewPlan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/ResultTurn"
+            },
+            "type": "array",
+            "title": "Turns"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Report"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "processing_incomplete": {
+            "type": "boolean",
+            "title": "Processing Incomplete"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session",
+          "plan",
+          "turns",
+          "report",
+          "processing_incomplete"
+        ],
+        "title": "ResultView"
       },
       "SectionRef": {
         "properties": {

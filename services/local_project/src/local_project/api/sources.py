@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from local_project.inventory.walk import inventory
 from local_project.observability.trace import trace_sink
+from local_project.observer.project_answers import project_answers
 from local_project.observer.run import observe
 from local_project.observer.tasks import observer_tasks
 from local_project.settings import get_settings
@@ -31,6 +32,21 @@ class ObserveRequest(BaseModel):
 class ChooseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: UUID
+
+
+class ProjectAnswersRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+    operation_id: UUID
+    snapshot: str = Field(min_length=1, max_length=200_000)
+    turns: list["ProjectAnswerTurn"] = Field(max_length=100)
+
+
+class ProjectAnswerTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    turn_no: int = Field(ge=1, le=100)
+    question: str = Field(min_length=1, max_length=1000)
+    answer: str = Field(min_length=1, max_length=8000)
 
 
 @lru_cache(maxsize=1)
@@ -96,4 +112,36 @@ def make_router(token_dependency) -> APIRouter:
         registry.release(source_handle, session_id)
         return {"status": "released"}
 
+    @router.post("/v1/sources/{source_handle}:project-answers")
+    async def project_answers_source(
+        source_handle: str,
+        body: ProjectAnswersRequest,
+        model: Annotated[ModelAdapter, Depends(get_observer_model)],
+    ) -> dict:
+        root = registry.get(source_handle, body.session_id)
+        import json
+
+        result = await observer_tasks.run(
+            body.operation_id,
+            body.session_id,
+            source_handle,
+            lambda: _project_answer_json(root, body, model),
+        )
+        return json.loads(result)
+
     return router
+
+
+async def _project_answer_json(root, body: ProjectAnswersRequest, model: ModelAdapter) -> str:
+    import json
+
+    return json.dumps(
+        await project_answers(
+            root,
+            body.session_id,
+            body.snapshot,
+            [turn.model_dump() for turn in body.turns],
+            model,
+        ),
+        ensure_ascii=False,
+    )
