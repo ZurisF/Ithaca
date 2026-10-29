@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 from sqlalchemy import text
 
+from app.api.curation import router as curation_router
 from app.api.errors import AppError, ErrorEnvelope, app_error_handler
 from app.api.identity import Identity, get_identity
 from app.api.internal import router as internal_router
@@ -68,6 +69,7 @@ app.add_middleware(
 )
 app.include_router(prepare_router)
 app.include_router(interview_router)
+app.include_router(curation_router)
 app.include_router(internal_router)
 
 

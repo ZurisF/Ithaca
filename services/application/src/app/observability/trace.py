@@ -24,3 +24,13 @@ class PostgresTraceSink:
                 """),
                 span.__dict__,
             )
+
+
+async def purge_expired_traces() -> None:
+    async with session_factory() as db, db.begin():
+        await db.execute(
+            text("""
+            DELETE FROM telemetry.model_calls
+            WHERE finished_at < now() - interval '30 days'
+        """)
+        )

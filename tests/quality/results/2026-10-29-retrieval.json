@@ -1,0 +1,93 @@
+{
+  "evaluated_at": "2026-10-29T07:34:46.165677+00:00",
+  "case_sha256": "f2b74d9f4e68b14fdf799dd7c7d91e7a0222122dddd3a718d139f0bf75474400",
+  "bank_count": 538,
+  "retrieval_k": 3,
+  "ragas_version": "0.4.3",
+  "judge_model": "gpt-6.1-sol",
+  "cases": [
+    {
+      "id": "hybrid_recall",
+      "topic": "rag",
+      "query": "考察企业文档检索中 BM25 和稠密向量两路召回的适用场景与结果融合",
+      "reference": "合适的问题应问清为什么同时使用 BM25 和稠密向量、两路分别适合什么问题，以及如何合并结果。",
+      "gold_questions": [
+        "为什么采用 BM25 与稠密向量混合召回？两路分别适合什么问题，结果如何合并？"
+      ],
+      "candidates": [
+        "为什么采用 BM25 与稠密向量混合召回？两路分别适合什么问题，结果如何合并？",
+        "当检索召回率较高但答案仍有事实错误时，如何结合 Trace、日志和评测集定位问题来自意图识别、召回、重排、工具返回还是生成，并确定优先修复点？"
+      ],
+      "retrieval_latency_ms": 14446,
+      "recall_at_3": 1.0,
+      "ndcg_at_3": 1.0,
+      "exact_duplicate_count": 0,
+      "human_adaptation": null,
+      "semantic_duplicate_count": null,
+      "ragas_context_relevance": {
+        "value": 0.75,
+        "error": null
+      },
+      "ragas_context_recall": {
+        "value": 1.0,
+        "error": null
+      }
+    },
+    {
+      "id": "authorization_cache",
+      "topic": "security",
+      "query": "考察用户权限撤销后，十分钟正文缓存命中是否还能返回内容",
+      "reference": "合适的问题应覆盖权限撤销后的缓存正文可见性，以及权限校验和缓存失效的设计。",
+      "gold_questions": [
+        "文档正文缓存十分钟期间用户权限被撤销；再次命中缓存时能否返回正文，系统应怎样设计？"
+      ],
+      "candidates": [
+        "文档正文缓存十分钟期间用户权限被撤销；再次命中缓存时能否返回正文，系统应怎样设计？",
+        "正文缓存与权限校验应如何分工？怎样让权限撤销及时生效？",
+        "历史被压缩成摘要后，原始对话是否仍需保存？"
+      ],
+      "retrieval_latency_ms": 614,
+      "recall_at_3": 1.0,
+      "ndcg_at_3": 1.0,
+      "exact_duplicate_count": 0,
+      "human_adaptation": null,
+      "semantic_duplicate_count": null,
+      "ragas_context_relevance": {
+        "value": 1.0,
+        "error": null
+      },
+      "ragas_context_recall": {
+        "value": 1.0,
+        "error": null
+      }
+    },
+    {
+      "id": "ambiguous_query",
+      "topic": "intent",
+      "query": "考察自然语言查询包含口语表达、错别字或歧义时的处理办法",
+      "reference": "合适的问题应覆盖口语化查询、错别字和歧义的识别与处理。",
+      "gold_questions": [
+        "如何处理口语、错别字和有歧义的用户查询？"
+      ],
+      "candidates": [
+        "如何处理口语、错别字和有歧义的用户查询？",
+        "用户明确询问旧知识时，怎样避免查询改写把问题带到新知识？",
+        "合同或长文档输入有歧义、信息不完整时，系统如何避免强行给出确定结论？"
+      ],
+      "retrieval_latency_ms": 328,
+      "recall_at_3": 1.0,
+      "ndcg_at_3": 1.0,
+      "exact_duplicate_count": 0,
+      "human_adaptation": null,
+      "semantic_duplicate_count": null,
+      "ragas_context_relevance": {
+        "value": 0.75,
+        "error": null
+      },
+      "ragas_context_recall": {
+        "value": 1.0,
+        "error": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "documented",
+    "kind": "documented_directory",
+    "source_root": "tests/fixtures/gate2/documented",
+    "snapshot": "documented_snapshot.md",
+    "section": "Request Flow",
+    "topic": "system_design",
+    "fact": "validates a name",
+    "question": "How does the request service validate a name before storage?",
+    "answer": "The API checks the name and delegates one write to Store."
+  },
+  {
+    "id": "code_only",
+    "kind": "code_only_directory",
+    "source_root": "tests/fixtures/gate2/code_only",
+    "snapshot": "code_only_snapshot.md",
+    "section": "Save Flow",
+    "topic": "system_design",
+    "fact": "rejects non-integers",
+    "question": "What happens when receive gets a non-integer value?",
+    "answer": "It raises TypeError before Store.save runs."
+  },
+  {
+    "id": "oral_markdown",
+    "kind": "oral_markdown_supplement",
+    "source_root": null,
+    "snapshot": "oral_supplement.md",
+    "section": "Escalation Flow",
+    "topic": "system_design",
+    "fact": "ten minutes",
+    "question": "When does the incident coordinator alert the backup owner?",
+    "answer": "It alerts the backup after ten minutes without acknowledgement."
+  }
+]

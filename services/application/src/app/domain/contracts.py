@@ -121,6 +121,59 @@ class SessionView(SessionSummary):
     completed_at: datetime | None
 
 
+class CurationTurn(StrictModel):
+    turn_no: int
+    question: str
+    answer: str | None
+    feedback_value: Literal["upvote", "downvote"] | None
+    feedback_reason: str | None
+
+
+class CurationSuggestion(StrictModel):
+    edited_question: str = Field(min_length=1, max_length=1000)
+    proposed_topic_path: str = Field(min_length=1, max_length=200)
+    privacy_notes: str = Field(min_length=1, max_length=2000)
+    duplicate_notes: str = Field(min_length=1, max_length=1000)
+    ideal_answer: str | None = Field(default=None, max_length=8000)
+
+
+class CurationSource(StrictModel):
+    session_id: UUID
+    status: Literal["completed", "aborted"]
+    updated_at: datetime
+    turns: list[CurationTurn]
+
+
+class CurationItem(StrictModel):
+    id: UUID
+    source_session_id: UUID
+    source_turn_no: int
+    status: Literal["pending", "reviewed", "added", "rejected"]
+    edited_question: str | None
+    proposed_topic_path: str | None
+    review_notes: str | None
+    reviewed_by: UUID | None
+    question_bank_id: UUID | None
+    exact_duplicate: bool
+    suggestion: CurationSuggestion | None = None
+
+
+class CurationQueue(StrictModel):
+    sources: list[CurationSource]
+    items: list[CurationItem]
+    topics: list[str]
+
+
+class BankQuestion(StrictModel):
+    id: UUID
+    question: str
+    topic_path: str
+    ideal_answer: str | None
+    usage_count: int
+    upvote_count: int
+    downvote_count: int
+
+
 class SnapshotView(StrictModel):
     session_id: UUID
     content: str

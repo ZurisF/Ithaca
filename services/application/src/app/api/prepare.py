@@ -20,7 +20,7 @@ from app.domain.contracts import (
     SnapshotView,
     SourceInventory,
 )
-from app.services import planning
+from app.services import planning, session_deletion
 from app.services import prepare as service
 from model_adapter import ModelAdapter
 
@@ -71,6 +71,11 @@ async def list_sessions(
 @router.get("/{session_id}", response_model=SessionView)
 async def get_session(session_id: UUID, db: Database, identity: CurrentIdentity) -> SessionView:
     return await service.get(db, identity, session_id)
+
+
+@router.delete("/{session_id}", status_code=204)
+async def delete_session(session_id: UUID, db: Database, identity: CurrentIdentity) -> None:
+    await session_deletion.delete(db, identity, session_id)
 
 
 @router.post("/{session_id}/snapshot:import", response_model=SnapshotView)

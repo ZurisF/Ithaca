@@ -33,6 +33,8 @@ class QuestionCandidate:
 class RetrievalModels(Protocol):
     async def embed_query(self, query: str) -> list[float]: ...
 
+    async def embed_document(self, question: str) -> list[float]: ...
+
     async def rerank(self, query: str, questions: list[str]) -> list[float]: ...
 
 
@@ -62,6 +64,22 @@ class LocalBGEModels:
         )
         return result["dense_vecs"][0].tolist()
 
+    def _embed_document(self, question: str) -> list[float]:
+        with self._load_lock:
+            if self._embedding is None:
+                from FlagEmbedding import BGEM3FlagModel
+
+                self._embedding = BGEM3FlagModel(self.embedding_path, use_fp16=False)
+        result = self._embedding.encode_corpus(
+            [question],
+            batch_size=1,
+            max_length=512,
+            return_dense=True,
+            return_sparse=False,
+            return_colbert_vecs=False,
+        )
+        return result["dense_vecs"][0].tolist()
+
     def _rerank(self, query: str, questions: list[str]) -> list[float]:
         with self._load_lock:
             if self._reranker is None:
@@ -77,6 +95,9 @@ class LocalBGEModels:
 
     async def embed_query(self, query: str) -> list[float]:
         return await asyncio.to_thread(self._embed, query)
+
+    async def embed_document(self, question: str) -> list[float]:
+        return await asyncio.to_thread(self._embed_document, question)
 
     async def rerank(self, query: str, questions: list[str]) -> list[float]:
         return await asyncio.to_thread(self._rerank, query, questions)

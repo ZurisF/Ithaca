@@ -185,6 +185,56 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Delete Session",
+        "operationId": "delete_session_v1_interviews__session_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/interviews/{session_id}/snapshot:import": {
@@ -1642,6 +1692,396 @@
         }
       }
     },
+    "/v1/interviews/{session_id}/curation-grant": {
+      "put": {
+        "tags": [
+          "curation"
+        ],
+        "summary": "Grant",
+        "operationId": "grant_v1_interviews__session_id__curation_grant_put",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "curation"
+        ],
+        "summary": "Revoke",
+        "operationId": "revoke_v1_interviews__session_id__curation_grant_delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/curation-items": {
+      "get": {
+        "tags": [
+          "curation"
+        ],
+        "summary": "Queue",
+        "operationId": "queue_v1_admin_curation_items_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurationQueue"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "curation"
+        ],
+        "summary": "Save Item",
+        "operationId": "save_item_v1_admin_curation_items_post",
+        "parameters": [
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurationItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/curation-items/{item_id}:add-to-question-bank": {
+      "post": {
+        "tags": [
+          "curation"
+        ],
+        "summary": "Publish",
+        "operationId": "publish_v1_admin_curation_items__item_id__add_to_question_bank_post",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurationItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/question-bank": {
+      "get": {
+        "tags": [
+          "curation"
+        ],
+        "summary": "Question Bank",
+        "operationId": "question_bank_v1_admin_question_bank_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BankQuestion"
+                  },
+                  "title": "Response Question Bank V1 Admin Question Bank Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/internal/v1/model-traces": {
       "post": {
         "tags": [
@@ -1841,6 +2281,58 @@
         ],
         "title": "AnswerRequest"
       },
+      "BankQuestion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "topic_path": {
+            "type": "string",
+            "title": "Topic Path"
+          },
+          "ideal_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Answer"
+          },
+          "usage_count": {
+            "type": "integer",
+            "title": "Usage Count"
+          },
+          "upvote_count": {
+            "type": "integer",
+            "title": "Upvote Count"
+          },
+          "downvote_count": {
+            "type": "integer",
+            "title": "Downvote Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "question",
+          "topic_path",
+          "ideal_answer",
+          "usage_count",
+          "upvote_count",
+          "downvote_count"
+        ],
+        "title": "BankQuestion"
+      },
       "CorrectionRequest": {
         "properties": {
           "turn_no": {
@@ -1877,6 +2369,299 @@
           "decision"
         ],
         "title": "CorrectionRequest"
+      },
+      "CurationItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source_session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Source Session Id"
+          },
+          "source_turn_no": {
+            "type": "integer",
+            "title": "Source Turn No"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "reviewed",
+              "added",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "edited_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Question"
+          },
+          "proposed_topic_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Topic Path"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "question_bank_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Bank Id"
+          },
+          "exact_duplicate": {
+            "type": "boolean",
+            "title": "Exact Duplicate"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurationSuggestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "source_session_id",
+          "source_turn_no",
+          "status",
+          "edited_question",
+          "proposed_topic_path",
+          "review_notes",
+          "reviewed_by",
+          "question_bank_id",
+          "exact_duplicate"
+        ],
+        "title": "CurationItem"
+      },
+      "CurationQueue": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CurationSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CurationItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sources",
+          "items",
+          "topics"
+        ],
+        "title": "CurationQueue"
+      },
+      "CurationSource": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "aborted"
+            ],
+            "title": "Status"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/CurationTurn"
+            },
+            "type": "array",
+            "title": "Turns"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "updated_at",
+          "turns"
+        ],
+        "title": "CurationSource"
+      },
+      "CurationSuggestion": {
+        "properties": {
+          "edited_question": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Edited Question"
+          },
+          "proposed_topic_path": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Proposed Topic Path"
+          },
+          "privacy_notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Privacy Notes"
+          },
+          "duplicate_notes": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Duplicate Notes"
+          },
+          "ideal_answer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Answer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "edited_question",
+          "proposed_topic_path",
+          "privacy_notes",
+          "duplicate_notes"
+        ],
+        "title": "CurationSuggestion"
+      },
+      "CurationTurn": {
+        "properties": {
+          "turn_no": {
+            "type": "integer",
+            "title": "Turn No"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "feedback_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "upvote",
+                  "downvote"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Value"
+          },
+          "feedback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "turn_no",
+          "question",
+          "answer",
+          "feedback_value",
+          "feedback_reason"
+        ],
+        "title": "CurationTurn"
       },
       "Dimension": {
         "properties": {
@@ -2370,6 +3155,25 @@
         ],
         "title": "ModelTraceRequest"
       },
+      "PublishRequest": {
+        "properties": {
+          "ideal_answer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Answer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PublishRequest"
+      },
       "RedactionHit": {
         "properties": {
           "kind": {
@@ -2576,6 +3380,96 @@
           "processing_incomplete"
         ],
         "title": "ResultView"
+      },
+      "SaveItemRequest": {
+        "properties": {
+          "source_session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Source Session Id"
+          },
+          "source_turn_no": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Source Turn No"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "reviewed",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "edited_question": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Question"
+          },
+          "proposed_topic_path": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Topic Path"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          },
+          "suggest": {
+            "type": "boolean",
+            "title": "Suggest",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_session_id",
+          "source_turn_no"
+        ],
+        "title": "SaveItemRequest"
       },
       "SectionRef": {
         "properties": {

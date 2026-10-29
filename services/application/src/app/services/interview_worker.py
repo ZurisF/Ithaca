@@ -2,12 +2,14 @@
 
 import asyncio
 import logging
+import time
 from contextlib import suppress
 
 from app.api.model_dependency import get_model_adapter
 from app.bank.retrieval import get_retriever
 from app.db import session_factory
 from app.domain.access import Identity
+from app.observability.trace import purge_expired_traces
 from app.repositories.finalization import worker_candidates
 from app.repositories.interview import recoverable_sessions
 from app.services.errors import AppError
@@ -67,11 +69,19 @@ async def recover_once() -> int:
 
 
 async def run_worker() -> None:
+    next_trace_cleanup = 0.0
     while True:
         try:
             await recover_once()
         except Exception:  # noqa: BLE001 - retry dependency outage on next scan
             logger.warning("interview_recovery_scan_failed")
+        if time.monotonic() >= next_trace_cleanup:
+            try:
+                await purge_expired_traces()
+            except Exception:  # noqa: BLE001 - retry on next scan
+                logger.warning("trace_retention_cleanup_failed")
+            else:
+                next_trace_cleanup = time.monotonic() + 3600
         await asyncio.sleep(5)
 
 

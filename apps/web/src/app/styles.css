@@ -19,6 +19,7 @@ h2 { font-size: 23px; margin: 5px 0 16px; }
 label { display: block; margin: 18px 0 8px; font-weight: 600; }
 textarea, select, .inline input { width: 100%; border: 1px solid #bfcac3; border-radius: 9px; background: #fbfcfa; color: inherit; padding: 12px; }
 textarea { resize: vertical; line-height: 1.55; }
+.markdown-file-input { display: block; width: 100%; max-width: 420px; border: 1px solid #bfcac3; border-radius: 9px; background: #fbfcfa; padding: 10px; }
 select { max-width: 360px; }
 .actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .secondary { background: white; color: #126b62; }
@@ -52,6 +53,11 @@ select { max-width: 360px; }
 .session-item { display: flex; justify-content: space-between; gap: 8px; text-align: left; background: #f8faf8; color: #19322e; border-color: #dbe3dc; }
 .session-item.active { border-color: #126b62; background: #e7f2ee; }
 .session-item small { color: #64756e; }
+.session-entry { display: grid; gap: 8px; }
+.session-entry .session-item { width: 100%; }
+.curation-source-turn { border-top: 1px solid #e3e9e4; padding: 14px 0; }
+.curation-source-turn p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.curation-editor { border-top: 1px solid #e3e9e4; margin-top: 20px; padding-top: 20px; }
 .opinion { border-top: 1px solid #e3e9e4; margin-top: 24px; }
 .source-box { border: 1px solid #d8e5de; background: #f5faf6; border-radius: 12px; padding: 18px; margin: 18px 0 26px; }
 .source-box h3 { margin: 0 0 8px; }

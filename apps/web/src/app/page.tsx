@@ -41,6 +41,7 @@ export default function Home() {
   const [interview, setInterview] = useState<Interview | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [markdown, setMarkdown] = useState("");
+  const [markdownFileName, setMarkdownFileName] = useState<string | null>(null);
   const [opinion, setOpinion] = useState("");
   const [answerText, setAnswerText] = useState("");
   const [correctionText, setCorrectionText] = useState("");
@@ -51,6 +52,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const pendingOpinionKey = useRef<string | null>(null);
   const pendingObserveKey = useRef<string | null>(null);
   const activeSessionId = useRef<string | null>(null);
@@ -68,6 +70,7 @@ export default function Home() {
       setOpinion("");
       setConfirmEmpty(false);
       setConfirmationNotice("");
+      setMarkdownFileName(null);
       pendingOpinionKey.current = null;
       pendingObserveKey.current = null;
     }
@@ -181,6 +184,26 @@ export default function Home() {
     finally { setBusy(false); }
   }
 
+  async function readMarkdownFile(file: File) {
+    setBusy(true); setError("");
+    try {
+      if (!/\.(md|markdown)$/i.test(file.name)) throw new Error("请选择 .md 或 .markdown 文件。");
+      if (file.size > 800_000) throw new Error("文件过大，Markdown 内容最多支持 20 万字符。");
+      let content: string;
+      try {
+        content = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
+      } catch {
+        throw new Error("无法读取文件，请确认它是 UTF-8 编码的 Markdown。");
+      }
+      if (!content.trim()) throw new Error("Markdown 文件内容不能为空。");
+      if (content.length > 200_000) throw new Error("Markdown 内容最多支持 20 万字符。");
+      setMarkdown(content);
+      setMarkdownFileName(file.name);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "无法读取 Markdown 文件。");
+    } finally { setBusy(false); }
+  }
+
   function toggle(section: Section) {
     const present = selected.some(item => item.kind === section.kind && item.title === section.title);
     setSelected(present ? selected.filter(item => item.kind !== section.kind || item.title !== section.title) : [...selected, section]);
@@ -191,6 +214,7 @@ export default function Home() {
       <p className="eyebrow">PROJECT INTERVIEW LAB · 面试工作台</p>
       <h1>让项目经验经得起追问</h1>
       <p className="lead">整理项目材料、完成面试，并回看完整问答与复盘报告。</p>
+      <a href="/admin">管理员策展与题库</a>
     </header>
     {error && <div className="error" role="alert">{error} <button className="secondary" onClick={() => void run(async () => {
       if (session) await loadSession(session.id);
@@ -205,11 +229,29 @@ export default function Home() {
           await loadSession(response.data.id);
         })}>创建会话</button></div>
       {sessions.length === 0 ? <p className="muted">还没有会话。创建后可从 Markdown 开始准备。</p> :
-        <div className="session-list">{sessions.map(item => <button key={item.id}
-          className={session?.id === item.id ? "session-item active" : "session-item"} disabled={busy}
-          onClick={() => void run(() => loadSession(item.id))}>
-          <span>{new Date(item.created_at).toLocaleString("zh-CN")}</span><small>{item.status}</small>
-        </button>)}</div>}
+        <div className="session-list">{sessions.map(item => <div className="session-entry" key={item.id}>
+          <button className={session?.id === item.id ? "session-item active" : "session-item"} disabled={busy}
+            onClick={() => void run(() => loadSession(item.id))}>
+            <span>{new Date(item.created_at).toLocaleString("zh-CN")}</span><small>{item.status}</small>
+          </button>
+          {deleteTarget === item.id ? <div className="exit-confirm">
+            <p>确认删除这场会话及其快照、问答和报告？</p>
+            <button className="secondary" disabled={busy} onClick={() => setDeleteTarget(null)}>取消</button>{" "}
+            <button className="danger" disabled={busy} onClick={() => void run(async () => {
+              const response = await api.DELETE("/v1/interviews/{session_id}", {
+                params: { path: { session_id: item.id } }, headers,
+              });
+              if (response.error) throw new Error(errorMessage(response.error));
+              setSessions(previous => previous.filter(row => row.id !== item.id));
+              setDeleteTarget(null);
+              if (session?.id === item.id) {
+                activeSessionId.current = null;
+                setSession(null); setSnapshot(null); setPlan(null); setInterview(null); setResult(null);
+                window.history.replaceState(null, "", "/");
+              }
+            })}>确认删除</button>
+          </div> : <button className="secondary" disabled={busy} onClick={() => setDeleteTarget(item.id)}>删除</button>}
+        </div>)}</div>}
     </section>
     {session && <>
       <section className="panel" aria-labelledby="snapshot-title">
@@ -254,10 +296,18 @@ export default function Home() {
               })}>{busy ? "观察中…" : "生成项目快照"}</button></div>
           </>}
         </div>
-        <p className="muted">粘贴项目 Markdown。写入前会执行敏感内容过滤；内容变化会清空原有范围和计划。</p>
+        <p className="muted">粘贴项目 Markdown，或选择本地 UTF-8 Markdown 文件。保存前可检查和修改内容；写入前会执行敏感内容过滤，内容变化会清空原有范围和计划。</p>
+        <label htmlFor="markdown-file">选择本地 Markdown 文件</label>
+        <input id="markdown-file" className="markdown-file-input" type="file" accept=".md,.markdown,text/markdown"
+          disabled={busy || session.status !== "preparing"} onChange={event => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = "";
+            if (file) void readMarkdownFile(file);
+          }} />
+        {markdownFileName && <p className="muted" role="status">已读取：{markdownFileName}。检查内容后点击上传。</p>}
         <label htmlFor="markdown">Markdown 材料</label>
         <textarea id="markdown" rows={12} maxLength={200000} value={markdown}
-          disabled={busy || session.status !== "preparing"} onChange={event => setMarkdown(event.target.value)}
+          disabled={busy || session.status !== "preparing"} onChange={event => { setMarkdown(event.target.value); setMarkdownFileName(null); }}
           placeholder="# 项目名\n## Modules\n### 模块名\n...\n## Threads\n### 流程名\n..." />
         <div className="actions"><button disabled={busy || session.status !== "preparing" || !markdown.trim()}
           onClick={() => void run(async () => {
@@ -266,7 +316,7 @@ export default function Home() {
             });
             if (!response.data) throw new Error(errorMessage(response.error));
             await loadSession(session.id);
-          })}>保存快照并解析范围</button></div>
+          })}>{markdownFileName ? "上传并解析范围" : "保存快照并解析范围"}</button></div>
         {snapshot && <div className="opinion"><label htmlFor="opinion">补充你的观点（可选）</label>
           <div className="inline"><input id="opinion" maxLength={4000} value={opinion}
             disabled={busy || session.status !== "preparing"} onChange={event => { setOpinion(event.target.value); pendingOpinionKey.current = null; }}
@@ -419,6 +469,22 @@ export default function Home() {
         </div>}
       </section>}
       {result && <Results result={result} headers={headers} onRefresh={() => loadSession(session.id)} />}
+      <section className="panel" aria-labelledby="curation-title">
+        <p className="step">07 / CURATION</p><h2 id="curation-title">策展授权</h2>
+        <p className="muted">授权后，管理员仅在本场会话结束时可读取问答材料并人工审核题目。撤销授权后，管理员不能再读取本场私人材料；此前已人工入库的公共题目会保留。</p>
+        <button className={session.curation_review ? "secondary" : ""} disabled={busy}
+          onClick={() => void run(async () => {
+            const response = session.curation_review
+              ? await api.DELETE("/v1/interviews/{session_id}/curation-grant", {
+                  params: { path: { session_id: session.id } }, headers,
+                })
+              : await api.PUT("/v1/interviews/{session_id}/curation-grant", {
+                  params: { path: { session_id: session.id } }, headers,
+                });
+            if (!response.data) throw new Error(errorMessage(response.error));
+            setSession(response.data);
+          })}>{session.curation_review ? "撤销策展授权" : "授权进入策展池"}</button>
+      </section>
     </>}
   </main>;
 }

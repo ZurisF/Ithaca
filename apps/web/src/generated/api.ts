@@ -33,7 +33,8 @@ export interface paths {
         get: operations["get_session_v1_interviews__session_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Session */
+        delete: operations["delete_session_v1_interviews__session_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -430,6 +431,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interviews/{session_id}/curation-grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Grant */
+        put: operations["grant_v1_interviews__session_id__curation_grant_put"];
+        post?: never;
+        /** Revoke */
+        delete: operations["revoke_v1_interviews__session_id__curation_grant_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/curation-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Queue */
+        get: operations["queue_v1_admin_curation_items_get"];
+        put?: never;
+        /** Save Item */
+        post: operations["save_item_v1_admin_curation_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/curation-items/{item_id}:add-to-question-bank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish */
+        post: operations["publish_v1_admin_curation_items__item_id__add_to_question_bank_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/question-bank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Question Bank */
+        get: operations["question_bank_v1_admin_question_bank_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/v1/model-traces": {
         parameters: {
             query?: never;
@@ -509,6 +580,26 @@ export interface components {
             /** Answer */
             answer: string;
         };
+        /** BankQuestion */
+        BankQuestion: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /** Topic Path */
+            topic_path: string;
+            /** Ideal Answer */
+            ideal_answer: string | null;
+            /** Usage Count */
+            usage_count: number;
+            /** Upvote Count */
+            upvote_count: number;
+            /** Downvote Count */
+            downvote_count: number;
+        };
         /** CorrectionRequest */
         CorrectionRequest: {
             /** Turn No */
@@ -520,6 +611,94 @@ export interface components {
             decision: "confirm" | "do_not_write";
             /** Edited Text */
             edited_text?: string | null;
+        };
+        /** CurationItem */
+        CurationItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Source Session Id
+             * Format: uuid
+             */
+            source_session_id: string;
+            /** Source Turn No */
+            source_turn_no: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "reviewed" | "added" | "rejected";
+            /** Edited Question */
+            edited_question: string | null;
+            /** Proposed Topic Path */
+            proposed_topic_path: string | null;
+            /** Review Notes */
+            review_notes: string | null;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Question Bank Id */
+            question_bank_id: string | null;
+            /** Exact Duplicate */
+            exact_duplicate: boolean;
+            suggestion?: components["schemas"]["CurationSuggestion"] | null;
+        };
+        /** CurationQueue */
+        CurationQueue: {
+            /** Sources */
+            sources: components["schemas"]["CurationSource"][];
+            /** Items */
+            items: components["schemas"]["CurationItem"][];
+            /** Topics */
+            topics: string[];
+        };
+        /** CurationSource */
+        CurationSource: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "aborted";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Turns */
+            turns: components["schemas"]["CurationTurn"][];
+        };
+        /** CurationSuggestion */
+        CurationSuggestion: {
+            /** Edited Question */
+            edited_question: string;
+            /** Proposed Topic Path */
+            proposed_topic_path: string;
+            /** Privacy Notes */
+            privacy_notes: string;
+            /** Duplicate Notes */
+            duplicate_notes: string;
+            /** Ideal Answer */
+            ideal_answer?: string | null;
+        };
+        /** CurationTurn */
+        CurationTurn: {
+            /** Turn No */
+            turn_no: number;
+            /** Question */
+            question: string;
+            /** Answer */
+            answer: string | null;
+            /** Feedback Value */
+            feedback_value: ("upvote" | "downvote") | null;
+            /** Feedback Reason */
+            feedback_reason: string | null;
         };
         /** Dimension */
         Dimension: {
@@ -672,6 +851,11 @@ export interface components {
             /** Error Code */
             error_code?: string | null;
         };
+        /** PublishRequest */
+        PublishRequest: {
+            /** Ideal Answer */
+            ideal_answer?: string | null;
+        };
         /** RedactionHit */
         RedactionHit: {
             /** Kind */
@@ -721,6 +905,31 @@ export interface components {
             report: components["schemas"]["Report"] | null;
             /** Processing Incomplete */
             processing_incomplete: boolean;
+        };
+        /** SaveItemRequest */
+        SaveItemRequest: {
+            /**
+             * Source Session Id
+             * Format: uuid
+             */
+            source_session_id: string;
+            /** Source Turn No */
+            source_turn_no: number;
+            /** Item Id */
+            item_id?: string | null;
+            /** Status */
+            status?: ("reviewed" | "rejected") | null;
+            /** Edited Question */
+            edited_question?: string | null;
+            /** Proposed Topic Path */
+            proposed_topic_path?: string | null;
+            /** Review Notes */
+            review_notes?: string | null;
+            /**
+             * Suggest
+             * @default false
+             */
+            suggest: boolean;
         };
         /** SectionRef */
         SectionRef: {
@@ -988,6 +1197,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SessionView"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_session_v1_interviews__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1777,6 +2017,212 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_v1_interviews__session_id__curation_grant_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_v1_interviews__session_id__curation_grant_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    queue_v1_admin_curation_items_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationQueue"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_item_v1_admin_curation_items_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_v1_admin_curation_items__item_id__add_to_question_bank_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurationItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    question_bank_v1_admin_question_bank_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankQuestion"][];
                 };
             };
             /** @description Validation Error */
