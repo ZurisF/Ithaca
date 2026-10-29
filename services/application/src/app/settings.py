@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     model_max_attempts: int = Field(default=2, ge=1, le=5)
     model_max_concurrency: int = Field(default=4, ge=1, le=32)
     retrieval_limit: int = Field(default=3, ge=0, le=3)
+    embedding_model_path: str = "BAAI/bge-m3"
+    reranker_model_path: str = "BAAI/bge-reranker-base"
+    retrieval_min_score: float = Field(default=0.1, ge=0, le=1)
+    retrieval_timeout_seconds: int = Field(default=30, ge=1, le=180)
+    retrieval_max_attempts: int = Field(default=2, ge=1, le=3)
 
     @property
     def allowed_origins(self) -> list[str]:

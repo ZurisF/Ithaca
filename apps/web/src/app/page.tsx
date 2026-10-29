@@ -8,6 +8,7 @@ type Session = components["schemas"]["SessionView"];
 type Summary = components["schemas"]["SessionSummary"];
 type Snapshot = components["schemas"]["SnapshotView"];
 type Plan = components["schemas"]["InterviewPlan"];
+type Interview = components["schemas"]["InterviewView"];
 type Section = components["schemas"]["SectionRef"];
 type Direction = components["schemas"]["Direction"];
 type SourceInventory = components["schemas"]["SourceInventory"];
@@ -35,6 +36,7 @@ export default function Home() {
   const [sourceInventory, setSourceInventory] = useState<SourceInventory | null>(null);
   const [modelReadiness, setModelReadiness] = useState<ModelReadiness | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [interview, setInterview] = useState<Interview | null>(null);
   const [markdown, setMarkdown] = useState("");
   const [opinion, setOpinion] = useState("");
   const [direction, setDirection] = useState<Direction>("project_overview");
@@ -69,8 +71,56 @@ export default function Home() {
       if (!response.data) throw new Error(errorMessage(response.error));
       setPlan(response.data);
     } else setPlan(null);
+    if (current.data.status !== "preparing") {
+      const response = await api.GET("/v1/interviews/{session_id}/current", {
+        params: { path: { session_id: id } }, headers,
+      });
+      if (!response.data) throw new Error(errorMessage(response.error));
+      setInterview(response.data);
+    } else setInterview(null);
     window.history.replaceState(null, "", `/?session=${encodeURIComponent(id)}`);
   }, []);
+
+  useEffect(() => {
+    if (!session || session.status !== "interviewing") return;
+    const id = session.id;
+    const controller = new AbortController();
+    const baseUrl = process.env.NEXT_PUBLIC_APPLICATION_URL ?? "http://127.0.0.1:8100";
+    async function refresh() {
+      const response = await api.GET("/v1/interviews/{session_id}/current", {
+        params: { path: { session_id: id } }, headers,
+      });
+      if (response.data && !controller.signal.aborted) {
+        setInterview(response.data);
+        setSession(response.data.session);
+      }
+    }
+    async function subscribe() {
+      while (!controller.signal.aborted) {
+        try {
+          await refresh();
+          const response = await fetch(`${baseUrl}/v1/interviews/${id}/events`, {
+            headers, signal: controller.signal,
+          });
+          if (!response.ok || !response.body) throw new Error("事件连接失败");
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (!controller.signal.aborted) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop() ?? "";
+            if (parts.some(part => part.includes("event: current_changed") || part.includes(": connected"))) await refresh();
+          }
+        } catch { /* Reconnect and read the PostgreSQL-backed current view. */ }
+        if (!controller.signal.aborted) await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
+    void subscribe();
+    return () => controller.abort();
+  }, [session?.id, session?.status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,8 +287,36 @@ export default function Home() {
         {plan ? <ol className="stage-list">{plan.stages.map(stage => <li key={stage.id}>
           <strong>{stage.title}</strong><span>{stage.goal}</span><small>完成标准：{stage.complete_when}</small>
         </li>)}</ol> : <p className="muted">模型未配置时，生成请求会显示明确错误。</p>}
+        {plan && session.status === "preparing" && <div className="actions"><button
+          disabled={busy || !modelReadiness}
+          onClick={() => void run(async () => {
+            const response = await api.POST("/v1/interviews/{session_id}/start", {
+              params: { path: { session_id: session.id } }, headers,
+            });
+            if (!response.data) throw new Error(errorMessage(response.error));
+            setInterview(response.data);
+            setSession(response.data.session);
+          })}>{busy ? "进入面试中…" : "开始面试"}</button></div>}
+      </section>}
+      {interview && <section className="panel" aria-labelledby="interview-title">
+        <p className="step">05 / INTERVIEW</p><h2 id="interview-title">当前面试</h2>
+        {interview.current_stage_index !== null && interview.plan &&
+          <p className="muted">阶段 {interview.current_stage_index + 1}：{interview.plan.stages[interview.current_stage_index]?.title}</p>}
+        {interview.current_turn ? <>
+          <p className="lead">{interview.current_turn.question}</p>
+          <p className="muted">第 {interview.current_turn.turn_no} 题。回答与后续追问将在 Gate 4 接入。</p>
+        </> : interview.awaiting === "decision_retry" ? <>
+          <p className="muted">首题生成暂时失败。可明确重试当前决策。</p>
+          <div className="actions"><button disabled={busy} onClick={() => void run(async () => {
+            const response = await api.POST("/v1/interviews/{session_id}/decision:retry", {
+              params: { path: { session_id: session.id } }, headers,
+            });
+            if (!response.data) throw new Error(errorMessage(response.error));
+            setInterview(response.data); setSession(response.data.session);
+          })}>重试首题</button></div>
+        </> : <p className="muted">首题正在生成；刷新后会从当前视图恢复。</p>}
       </section>}
     </>}
-    <footer>施工进度：准备流程持续验收；实时面试和赛后功能仍在开发。</footer>
+    <footer>施工进度：首题发布已接入；回答、阶段推进和赛后功能仍在开发。</footer>
   </main>;
 }

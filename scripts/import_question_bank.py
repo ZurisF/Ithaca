@@ -1,4 +1,4 @@
-"""Run with: uv run --extra embedding python scripts/import_question_bank.py."""
+"""Run with: uv run python scripts/import_question_bank.py."""
 
 import argparse
 import json

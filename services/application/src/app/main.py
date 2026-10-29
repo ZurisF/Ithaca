@@ -12,6 +12,7 @@ from sqlalchemy import text
 from app.api.errors import AppError, ErrorEnvelope, app_error_handler
 from app.api.identity import Identity, get_identity
 from app.api.internal import router as internal_router
+from app.api.interview import router as interview_router
 from app.api.prepare import router as prepare_router
 from app.db import engine
 from app.domain.contracts import ModelReadiness
@@ -52,6 +53,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Idempotency-Key", "X-Dev-User"],
 )
 app.include_router(prepare_router)
+app.include_router(interview_router)
 app.include_router(internal_router)
 
 

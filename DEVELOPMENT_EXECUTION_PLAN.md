@@ -296,10 +296,10 @@ Planner 输出必须同时通过 JSON Schema/Pydantic 和确定性校验：
 
 ### 7.1 题库导入
 
-- [ ] importer 只读取 `agent-interview/按考点/README.md` 明确列出的 11 个主题文件。
-- [ ] 只把一级 `- ` 项识别为问题，不递归旧版、原始材料或公司分类目录。
-- [ ] 按精确 `question` 幂等插入；重复执行不 truncate、不覆盖管理员题目。
-- [ ] 生成 embedding 与 lexical document，并输出不含题目正文的数量/冲突统计。
+- [x] importer 只读取 `agent-interview/按考点/README.md` 明确列出的 11 个主题文件。
+- [x] 只把一级 `- ` 项识别为问题，不递归旧版、原始材料或公司分类目录。
+- [x] 按精确 `question` 幂等插入；重复执行不 truncate、不覆盖管理员题目。
+- [x] 生成 embedding 与 lexical document，并输出不含题目正文的数量/冲突统计。
 
 ### 7.2 Retrieval Module
 
