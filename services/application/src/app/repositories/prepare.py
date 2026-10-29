@@ -135,7 +135,7 @@ async def save_selection(
 async def get_append_receipt(db: AsyncSession, operation_key: str) -> Mapping | None:
     result = await db.execute(
         text("""
-            SELECT session_id, payload_hash FROM app.snapshot_append_operations
+            SELECT session_id, section, payload_hash FROM app.snapshot_append_operations
             WHERE operation_key = :key
         """),
         {"key": operation_key},
@@ -144,13 +144,13 @@ async def get_append_receipt(db: AsyncSession, operation_key: str) -> Mapping | 
 
 
 async def insert_append_receipt(
-    db: AsyncSession, operation_key: str, session_id: UUID, payload_hash: str
+    db: AsyncSession, operation_key: str, session_id: UUID, section: str, payload_hash: str
 ) -> None:
     await db.execute(
         text("""
             INSERT INTO app.snapshot_append_operations
                 (operation_key, session_id, section, payload_hash)
-            VALUES (:key, :id, '用户意见', :hash)
+            VALUES (:key, :id, :section, :hash)
         """),
-        {"key": operation_key, "id": session_id, "hash": payload_hash},
+        {"key": operation_key, "id": session_id, "section": section, "hash": payload_hash},
     )

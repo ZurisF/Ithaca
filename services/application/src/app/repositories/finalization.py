@@ -7,6 +7,42 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+def _task_key(session_id: UUID, kind: str, turn_no: int | None) -> str:
+    return f"{session_id}:{kind}" + (f":{turn_no}" if turn_no is not None else "")
+
+
+async def locked_session(db: AsyncSession, session_id: UUID) -> Mapping | None:
+    result = await db.execute(
+        text("""
+        SELECT status, feedback_frozen_at FROM app.interview_sessions
+        WHERE id = :id FOR UPDATE
+    """),
+        {"id": session_id},
+    )
+    return result.mappings().one_or_none()
+
+
+async def put_feedback(
+    db: AsyncSession, session_id: UUID, turn_no: int, value: str, reason: str | None
+) -> None:
+    await db.execute(
+        text("""
+        INSERT INTO app.question_feedback (session_id, turn_no, value, reason)
+        VALUES (:id, :turn_no, :value, :reason)
+        ON CONFLICT (session_id, turn_no) DO UPDATE
+        SET value = EXCLUDED.value, reason = EXCLUDED.reason, updated_at = now()
+    """),
+        {"id": session_id, "turn_no": turn_no, "value": value, "reason": reason},
+    )
+
+
+async def feedback_frozen_at(db: AsyncSession, session_id: UUID):
+    return await db.scalar(
+        text("SELECT feedback_frozen_at FROM app.interview_sessions WHERE id = :id"),
+        {"id": session_id},
+    )
+
+
 async def turns(db: AsyncSession, session_id: UUID) -> list[Mapping]:
     result = await db.execute(
         text("""
@@ -77,7 +113,7 @@ async def cancel_tasks(db: AsyncSession, session_id: UUID) -> None:
 async def claim_task(
     db: AsyncSession, session_id: UUID, kind: str, turn_no: int | None, owner: str
 ) -> bool:
-    key = f"{session_id}:{kind}" + (f":{turn_no}" if turn_no is not None else "")
+    key = _task_key(session_id, kind, turn_no)
     await db.execute(
         text("""
         INSERT INTO app.post_tasks (task_key, session_id, kind, turn_no, status)
@@ -85,6 +121,7 @@ async def claim_task(
     """),
         {"key": key, "id": session_id, "kind": kind, "turn_no": turn_no},
     )
+    # Exhausted expired leases must become terminal; otherwise they stay running forever.
     await db.execute(
         text("""
         UPDATE app.post_tasks SET status = 'failed', last_error_code = 'lease_expired',
@@ -95,6 +132,7 @@ async def claim_task(
         {"key": key},
     )
     result = await db.execute(
+        # Claim count bounds crash recovery; each model call has its own adapter retry budget.
         text("""
         UPDATE app.post_tasks SET status = 'running', attempt_count = attempt_count + 1,
             lease_owner = :owner, lease_expires_at = now() + interval '20 minutes',
@@ -111,7 +149,7 @@ async def claim_task(
 async def task_status(
     db: AsyncSession, session_id: UUID, kind: str, turn_no: int | None
 ) -> str | None:
-    key = f"{session_id}:{kind}" + (f":{turn_no}" if turn_no is not None else "")
+    key = _task_key(session_id, kind, turn_no)
     result = await db.execute(
         text("SELECT status FROM app.post_tasks WHERE task_key = :key"), {"key": key}
     )
@@ -127,7 +165,7 @@ async def finish_task(
     *,
     error: str | None = None,
 ) -> bool:
-    key = f"{session_id}:{kind}" + (f":{turn_no}" if turn_no is not None else "")
+    key = _task_key(session_id, kind, turn_no)
     result = await db.execute(
         text("""
         UPDATE app.post_tasks SET status = :status, last_error_code = :error,
@@ -137,6 +175,19 @@ async def finish_task(
           AND lease_expires_at > now() RETURNING task_key
     """),
         {"key": key, "owner": owner, "status": "failed" if error else "succeeded", "error": error},
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def active_lease(
+    db: AsyncSession, session_id: UUID, kind: str, turn_no: int | None, owner: str
+) -> bool:
+    result = await db.execute(
+        text("""
+        SELECT 1 FROM app.post_tasks WHERE task_key = :key AND status = 'running'
+          AND lease_owner = :owner AND lease_expires_at > now() FOR UPDATE
+    """),
+        {"key": _task_key(session_id, kind, turn_no), "owner": owner},
     )
     return result.scalar_one_or_none() is not None
 

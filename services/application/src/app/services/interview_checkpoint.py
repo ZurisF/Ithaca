@@ -15,10 +15,31 @@ def checkpoint_key(session_id: UUID) -> str:
     return f"interview:{session_id}:checkpoint"
 
 
+def finalization_checkpoint_key(session_id: UUID) -> str:
+    return f"interview:{session_id}:finalization"
+
+
 async def delete_checkpoint(session_id: UUID) -> None:
     redis = Redis.from_url(get_settings().redis_url)
     try:
-        await redis.delete(checkpoint_key(session_id))
+        await redis.delete(checkpoint_key(session_id), finalization_checkpoint_key(session_id))
+    finally:
+        await redis.aclose()
+
+
+async def read_finalization_checkpoint(session_id: UUID) -> str | None:
+    redis = Redis.from_url(get_settings().redis_url)
+    try:
+        raw = await redis.get(finalization_checkpoint_key(session_id))
+        return raw.decode() if raw else None
+    finally:
+        await redis.aclose()
+
+
+async def write_finalization_checkpoint(session_id: UUID, phase: str) -> None:
+    redis = Redis.from_url(get_settings().redis_url)
+    try:
+        await redis.set(finalization_checkpoint_key(session_id), phase, ex=60 * 60 * 24 * 30)
     finally:
         await redis.aclose()
 

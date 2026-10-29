@@ -287,6 +287,39 @@ def append_to_section(content: str, section: str, addition: str) -> str:
     return f"{stripped}\n\n## {section}\n\n{addition.strip()}\n"
 
 
+async def append_confirmed(
+    db: AsyncSession,
+    session_id: UUID,
+    operation_key: str,
+    section: str,
+    addition: str,
+    *,
+    conflict_code: str = "state_conflict",
+) -> str:
+    """Append a confirmed fact and its receipt in the caller's locked transaction."""
+    receipt = await repo.get_append_receipt(db, operation_key)
+    digest = hashlib.sha256(addition.encode("utf-8")).hexdigest()
+    if receipt is not None and (
+        receipt["session_id"] != session_id
+        or receipt["section"] != section
+        or receipt["payload_hash"] != digest
+    ):
+        raise AppError(409, conflict_code, "已确认的快照追加内容不能更改。")
+    content = await repo.get_snapshot(db, session_id)
+    if content is None:
+        raise AppError(409, "state_conflict", "面试材料不可用。")
+    if receipt is not None:
+        return content
+    updated = append_to_section(content, section, addition)
+    if len(updated) > 200_000:
+        raise AppError(422, "safety_filter_rejected", "快照已达到长度上限。")
+    # The unique receipt and snapshot update must commit together. Keep this check
+    # for replayed user confirmations, even when a post-task lease makes it unlikely.
+    await repo.insert_append_receipt(db, operation_key, session_id, section, digest)
+    await repo.replace_snapshot(db, session_id, updated)
+    return updated
+
+
 async def append_user_opinion(
     db: AsyncSession, identity: Identity, session_id: UUID, raw: str, idempotency_key: str
 ) -> SnapshotView:
@@ -312,7 +345,9 @@ async def append_user_opinion(
             content = append_to_section(content, "用户意见", addition)
             if len(content) > 200_000:
                 raise AppError(422, "safety_filter_rejected", "快照已达到长度上限。")
-            await repo.insert_append_receipt(db, operation_key, session_id, payload_hash)
+            await repo.insert_append_receipt(
+                db, operation_key, session_id, "用户意见", payload_hash
+            )
             await repo.replace_snapshot(db, session_id, content)
             await repo.clear_selection_and_plan(db, session_id)
     return SnapshotView(session_id=session_id, content=content, sections=parse_sections(content))

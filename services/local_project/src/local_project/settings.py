@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     )
     model_provider: str = Field(default="openai_compatible", validation_alias="APP_MODEL_PROVIDER")
     model_max_concurrency: int = Field(default=4, ge=1, le=32)
+    local_task_deadline_seconds: int = Field(
+        default=180, ge=1, le=900, validation_alias="APP_LOCAL_TASK_DEADLINE_SECONDS"
+    )
     inventory_max_items: int = Field(default=2_000, ge=1, le=2_000)
     max_file_bytes: int = Field(default=256_000, ge=1_024, le=256_000)
     observer_map_files: int = Field(default=120, ge=1, le=500)

@@ -2,6 +2,7 @@
 
 import json
 import re
+import time
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
@@ -12,6 +13,7 @@ from content_safety import ContentRejected, filter_text
 from local_project.errors import LocalError
 from local_project.inventory.repository_map import build_repository_map
 from local_project.inventory.walk import inventory
+from local_project.settings import get_settings
 from local_project.tools.project import ProjectTools
 from model_adapter import Message, ModelAdapter, RetryPolicy
 
@@ -45,6 +47,7 @@ async def project_answers(
     turns: list[dict],
     model: ModelAdapter,
 ) -> dict:
+    deadline = time.monotonic() + get_settings().local_task_deadline_seconds
     try:
         snapshot = filter_text(snapshot, max_chars=200_000).text
         turns = [
@@ -63,6 +66,9 @@ async def project_answers(
     history: list[dict] = []
     evidence: dict[str, set[int]] = {}
     for step_no in range(6):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise LocalError(504, "task_deadline_exceeded", "项目答案生成超过时间预算。")
         payload = {
             "snapshot": snapshot,
             "turns": turns,
@@ -80,7 +86,7 @@ async def project_answers(
             ],
             output_schema=ProjectAnswerStep,
             prompt_version="v1",
-            retry_policy=RetryPolicy(max_attempts=3, deadline_seconds=180),
+            retry_policy=RetryPolicy(max_attempts=3, deadline_seconds=remaining),
         )
         if step.action == "finish":
             if step.answers is None:

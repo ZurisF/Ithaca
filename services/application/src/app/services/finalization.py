@@ -1,7 +1,6 @@
 """Terminal commands, finalization graph and PostgreSQL-backed result projection."""
 
 import asyncio
-import hashlib
 import json
 import logging
 from pathlib import Path
@@ -32,7 +31,12 @@ from app.repositories import finalization as repo
 from app.repositories import interview as interview_repo
 from app.repositories import prepare as prepare_repo
 from app.services.errors import AppError
-from app.services.interview_checkpoint import delete_checkpoint, notify_current_changed
+from app.services.interview_checkpoint import (
+    delete_checkpoint,
+    notify_current_changed,
+    read_finalization_checkpoint,
+    write_finalization_checkpoint,
+)
 from app.services.session_access import owned_session
 from app.settings import get_settings
 from content_safety import ContentRejected, filter_text
@@ -127,42 +131,18 @@ async def put_feedback(
         row = await owned_session(db, session_id, identity, lock=True)
         if row["status"] != "interviewing":
             raise AppError(409, "feedback_frozen", "面试结束后不能修改题目反馈。")
-        frozen = await db.scalar(
-            text("SELECT feedback_frozen_at FROM app.interview_sessions WHERE id = :id"),
-            {"id": session_id},
-        )
-        if frozen is not None:
+        if await repo.feedback_frozen_at(db, session_id) is not None:
             raise AppError(409, "feedback_frozen", "题目反馈已经冻结。")
         turn = await interview_repo.get_turn(db, session_id, turn_no)
         if turn is None:
             raise AppError(404, "turn_not_found", "找不到这道题。")
-        await db.execute(
-            text("""
-            INSERT INTO app.question_feedback (session_id, turn_no, value, reason)
-            VALUES (:id, :turn_no, :value, :reason)
-            ON CONFLICT (session_id, turn_no) DO UPDATE
-            SET value = EXCLUDED.value, reason = EXCLUDED.reason, updated_at = now()
-        """),
-            {"id": session_id, "turn_no": turn_no, "value": value, "reason": reason},
-        )
+        await repo.put_feedback(db, session_id, turn_no, value, reason)
     return FeedbackView(value=value, reason=reason)
 
 
 async def settle(session_id: UUID) -> None:
     async with session_factory() as db, db.begin():
-        row = (
-            (
-                await db.execute(
-                    text("""
-            SELECT status, feedback_frozen_at FROM app.interview_sessions
-            WHERE id = :id FOR UPDATE
-        """),
-                    {"id": session_id},
-                )
-            )
-            .mappings()
-            .one_or_none()
-        )
+        row = await repo.locked_session(db, session_id)
         if row is None or row["status"] not in {"post_processing", "completed", "aborted"}:
             return
         if row["feedback_frozen_at"] is None:
@@ -235,25 +215,16 @@ async def _call_model(
         ],
         output_schema=schema,
         prompt_version="v1",
-        retry_policy=RetryPolicy(max_attempts=3, deadline_seconds=settings.model_timeout_seconds),
+        retry_policy=RetryPolicy(
+            max_attempts=3, deadline_seconds=settings.post_model_timeout_seconds
+        ),
     )
 
 
 async def _run_task(session_id: UUID, kind: str, turn_no: int | None, work, publish) -> str:
     owner = str(uuid4())
     async with session_factory() as db, db.begin():
-        row = (
-            (
-                await db.execute(
-                    text("""
-            SELECT status FROM app.interview_sessions WHERE id = :id FOR UPDATE
-        """),
-                    {"id": session_id},
-                )
-            )
-            .mappings()
-            .one_or_none()
-        )
+        row = await repo.locked_session(db, session_id)
         if row is None or row["status"] != "post_processing":
             return "stopped"
         if not await repo.claim_task(db, session_id, kind, turn_no, owner):
@@ -261,31 +232,11 @@ async def _run_task(session_id: UUID, kind: str, turn_no: int | None, work, publ
     try:
         value = await work()
         async with session_factory() as db, db.begin():
-            row = (
-                (
-                    await db.execute(
-                        text("""
-                SELECT status FROM app.interview_sessions WHERE id = :id FOR UPDATE
-            """),
-                        {"id": session_id},
-                    )
-                )
-                .mappings()
-                .one_or_none()
-            )
+            row = await repo.locked_session(db, session_id)
             if row is None or row["status"] != "post_processing":
                 return "stopped"
             # Lock task before writing the artifact. A stale lease cannot publish.
-            active = await db.scalar(
-                text("""
-                SELECT 1 FROM app.post_tasks WHERE task_key = :key AND status = 'running'
-                  AND lease_owner = :owner AND lease_expires_at > now() FOR UPDATE
-            """),
-                {
-                    "key": f"{session_id}:{kind}" + (f":{turn_no}" if turn_no is not None else ""),
-                    "owner": owner,
-                },
-            )
+            active = await repo.active_lease(db, session_id, kind, turn_no, owner)
             if not active:
                 return "running"
             await publish(db, value)
@@ -331,10 +282,13 @@ async def _project_answers(session_id: UUID, model: ModelAdapter) -> str:
     async def work() -> tuple[list[ProjectAnswerItem], str | None]:
         result = None
         handle = row["source_handle"]
-        if handle and get_settings().desktop_instance_token:
+        settings = get_settings()
+        if handle and settings.desktop_instance_token:
             try:
-                settings = get_settings()
-                async with httpx.AsyncClient(timeout=190, trust_env=False) as client:
+                # The Local Runtime uses the same task deadline; HTTP gets transport slack.
+                async with httpx.AsyncClient(
+                    timeout=settings.local_task_deadline_seconds + 10, trust_env=False
+                ) as client:
                     response = await client.post(
                         f"{settings.local_runtime_url}/v1/sources/{handle}:project-answers",
                         headers={"Authorization": f"Bearer {settings.desktop_instance_token}"},
@@ -387,32 +341,11 @@ async def _project_answers(session_id: UUID, model: ModelAdapter) -> str:
     async def publish(db: AsyncSession, value: tuple[list[ProjectAnswerItem], str | None]) -> None:
         answers, append = value
         if append:
-            from app.services.prepare import append_to_section
+            from app.services.prepare import append_confirmed
 
-            key = f"session:{session_id}:post_verification"
-            receipt = await prepare_repo.get_append_receipt(db, key)
-            digest = hashlib.sha256(append.encode()).hexdigest()
-            if receipt is not None and receipt["payload_hash"] != digest:
-                raise AppError(409, "state_conflict", "事后核验内容与已提交回执不一致。")
-            if receipt is None:
-                current = await prepare_repo.get_snapshot(db, session_id)
-                assert current is not None
-                updated = append_to_section(current, "事后核验", append)
-                if len(updated) > 200_000:
-                    raise AppError(422, "safety_filter_rejected", "快照已达到长度上限。")
-                await db.execute(
-                    text("""
-                    INSERT INTO app.snapshot_append_operations
-                        (operation_key, session_id, section, payload_hash)
-                    VALUES (:key, :id, '事后核验', :digest)
-                """),
-                    {
-                        "key": key,
-                        "id": session_id,
-                        "digest": digest,
-                    },
-                )
-                await prepare_repo.replace_snapshot(db, session_id, updated)
+            await append_confirmed(
+                db, session_id, f"session:{session_id}:post_verification", "事后核验", append
+            )
         for answer in answers:
             await repo.write_turn_result(
                 db, session_id, answer.turn_no, "project_answer", answer.project_answer
@@ -445,10 +378,8 @@ async def _ideal_answer(session_id: UUID, turn: dict, model: ModelAdapter) -> st
     return await _run_task(session_id, "ideal_answer", turn_no, work, publish)
 
 
-async def _evaluation(session_id: UUID, turn_no: int, model: ModelAdapter) -> str:
-    async with session_factory() as db, db.begin():
-        snapshot = await prepare_repo.get_snapshot(db, session_id)
-        turn = next(t for t in await repo.turns(db, session_id) if t["turn_no"] == turn_no)
+async def _evaluation(session_id: UUID, turn: dict, snapshot: str, model: ModelAdapter) -> str:
+    turn_no = turn["turn_no"]
 
     async def work() -> str:
         result = await _call_model(
@@ -509,17 +440,29 @@ async def _report(session_id: UUID, model: ModelAdapter) -> str:
 
 
 async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
-    """The graph alone orders task dependencies; task rows are only a ledger."""
+    """Resume the dependency graph from its disposable Redis phase checkpoint."""
 
     async def load(_state: FinalizationState) -> FinalizationState:
         async with session_factory() as db, db.begin():
             status = await db.scalar(
                 text("SELECT status FROM app.interview_sessions WHERE id = :id"), {"id": session_id}
             )
-        return {"route": "continue" if status == "post_processing" else "stop"}
+        if status != "post_processing":
+            return {"route": "stop"}
+        phase = await read_finalization_checkpoint(session_id)
+        return {
+            "route": {
+                "settled": "references",
+                "references_done": "evaluations",
+                "evaluations_done": "report",
+                "evaluations_failed": "complete",
+                "report_done": "complete",
+            }.get(phase, "settle")
+        }
 
     async def settle_node(_state: FinalizationState) -> FinalizationState:
         await settle(session_id)
+        await write_finalization_checkpoint(session_id, "settled")
         return {"route": "continue"}
 
     async def references(_state: FinalizationState) -> FinalizationState:
@@ -529,25 +472,38 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
             ]
         states = await asyncio.gather(
             _project_answers(session_id, model),
-            *(_ideal_answer(session_id, t, model) for t in answered),
+            *(_ideal_answer(session_id, turn, model) for turn in answered),
         )
-        return {
-            "route": "continue" if all(s in {"succeeded", "failed"} for s in states) else "stop"
-        }
+        if not all(state in {"succeeded", "failed"} for state in states):
+            return {"route": "stop"}
+        await write_finalization_checkpoint(session_id, "references_done")
+        return {"route": "continue"}
 
     async def evaluations(_state: FinalizationState) -> FinalizationState:
+        # Read one final snapshot and one joined turn set after the reference barrier.
         async with session_factory() as db, db.begin():
+            snapshot = await prepare_repo.get_snapshot(db, session_id)
             answered = [
-                t["turn_no"] for t in await repo.turns(db, session_id) if t["answer"] is not None
+                dict(t) for t in await repo.turns(db, session_id) if t["answer"] is not None
             ]
-        states = await asyncio.gather(*(_evaluation(session_id, no, model) for no in answered))
-        if not all(s in {"succeeded", "failed"} for s in states):
+        assert snapshot is not None
+        states = await asyncio.gather(
+            *(_evaluation(session_id, turn, snapshot, model) for turn in answered)
+        )
+        if not all(state in {"succeeded", "failed"} for state in states):
             return {"route": "stop"}
-        return {"route": "report" if all(s == "succeeded" for s in states) else "complete"}
+        if all(state == "succeeded" for state in states):
+            await write_finalization_checkpoint(session_id, "evaluations_done")
+            return {"route": "report"}
+        await write_finalization_checkpoint(session_id, "evaluations_failed")
+        return {"route": "complete"}
 
     async def report_node(_state: FinalizationState) -> FinalizationState:
         state = await _report(session_id, model)
-        return {"route": "complete" if state in {"succeeded", "failed"} else "stop"}
+        if state not in {"succeeded", "failed"}:
+            return {"route": "stop"}
+        await write_finalization_checkpoint(session_id, "report_done")
+        return {"route": "complete"}
 
     async def complete(_state: FinalizationState) -> FinalizationState:
         async with session_factory() as db, db.begin():
@@ -573,18 +529,29 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
     ):
         graph.add_node(name, node)
     graph.add_edge(START, "load")
-    graph.add_conditional_edges("load", lambda s: s["route"], {"continue": "settle", "stop": END})
+    graph.add_conditional_edges(
+        "load",
+        lambda state: state["route"],
+        {
+            "settle": "settle",
+            "references": "references",
+            "evaluations": "evaluations",
+            "report": "report",
+            "complete": "complete",
+            "stop": END,
+        },
+    )
     graph.add_edge("settle", "references")
     graph.add_conditional_edges(
-        "references", lambda s: s["route"], {"continue": "evaluations", "stop": END}
+        "references", lambda state: state["route"], {"continue": "evaluations", "stop": END}
     )
     graph.add_conditional_edges(
         "evaluations",
-        lambda s: s["route"],
+        lambda state: state["route"],
         {"report": "report", "complete": "complete", "stop": END},
     )
     graph.add_conditional_edges(
-        "report", lambda s: s["route"], {"complete": "complete", "stop": END}
+        "report", lambda state: state["route"], {"complete": "complete", "stop": END}
     )
     graph.add_edge("complete", END)
     await graph.compile().ainvoke({"session_id": session_id})

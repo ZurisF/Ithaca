@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     model_base_url: str = "https://api.openai.com/v1"
     model_provider: str = "openai_compatible"
     model_timeout_seconds: int = Field(default=45, ge=1, le=300)
+    post_model_timeout_seconds: int = Field(default=180, ge=1, le=900)
+    local_task_deadline_seconds: int = Field(default=180, ge=1, le=900)
     model_max_attempts: int = Field(default=2, ge=1, le=5)
     model_max_concurrency: int = Field(default=4, ge=1, le=32)
     retrieval_limit: int = Field(default=3, ge=0, le=3)

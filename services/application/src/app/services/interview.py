@@ -1,6 +1,5 @@
 """Live interview commands; PostgreSQL publishes facts, Redis holds interrupts."""
 
-import hashlib
 import json
 import logging
 from dataclasses import dataclass
@@ -10,7 +9,6 @@ from uuid import UUID
 
 from langgraph.graph import END, START, StateGraph
 from pydantic import Field
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bank.retrieval import QuestionCandidate, QuestionRetriever
@@ -702,25 +700,11 @@ async def resolve_snapshot_correction(
             if decision_value == "do_not_write" and receipt is not None:
                 raise AppError(409, "state_conflict", "这条更正已经写入快照。")
             if decision_value == "confirm":
-                from app.services.prepare import append_to_section
+                from app.services.prepare import append_confirmed
 
-                digest = hashlib.sha256(candidate.encode("utf-8")).hexdigest()
-                if receipt is None:
-                    updated = append_to_section(snapshot, "用户意见", candidate)
-                    if len(updated) > 200_000:
-                        raise AppError(422, "safety_filter_rejected", "快照已达到长度上限。")
-                    await db.execute(
-                        text("""
-                        INSERT INTO app.snapshot_append_operations
-                            (operation_key, session_id, section, payload_hash)
-                        VALUES (:key, :session_id, '用户意见', :digest)
-                        """),
-                        {"key": key, "session_id": session_id, "digest": digest},
-                    )
-                    await prepare_repo.replace_snapshot(db, session_id, updated)
-                    snapshot = updated
-                elif receipt["payload_hash"] != digest:
-                    raise AppError(409, "answer_conflict", "更正内容已确认，不能再次更改。")
+                snapshot = await append_confirmed(
+                    db, session_id, key, "用户意见", candidate, conflict_code="answer_conflict"
+                )
         decision = SupervisorDecision.model_validate(pending["decision"])
         candidates = [
             QuestionCandidate(UUID(item["question_id"]), item["question"])
