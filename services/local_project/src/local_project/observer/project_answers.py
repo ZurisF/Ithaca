@@ -1,7 +1,6 @@
 """Bounded, read-only project answer investigation in the authorized source."""
 
 import json
-import re
 import time
 from pathlib import Path
 from typing import Literal
@@ -64,7 +63,6 @@ async def project_answers(
     tools = ProjectTools(root, items)
     repo_map = build_repository_map(root, items)
     history: list[dict] = []
-    evidence: dict[str, set[int]] = {}
     for step_no in range(6):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
@@ -91,16 +89,6 @@ async def project_answers(
         if step.action == "finish":
             if step.answers is None:
                 raise ValueError("project answers missing")
-            if step.post_verification_append:
-                citations = re.findall(
-                    r"`([^`\n]+):L(\d+)(?:-L(\d+))?`", step.post_verification_append
-                )
-                if not citations:
-                    raise ValueError("post verification needs read evidence")
-                for path, first, last in citations:
-                    needed = range(int(first), int(last or first) + 1)
-                    if any(line not in evidence.get(path, set()) for line in needed):
-                        raise ValueError("post verification cites unread evidence")
             return {
                 "post_verification_append": step.post_verification_append,
                 "answers": step.answers,
@@ -112,7 +100,5 @@ async def project_answers(
             first_line=step.first_line,
             last_line=step.last_line,
         )
-        for path, lines in result.evidence_lines.items():
-            evidence.setdefault(path, set()).update(lines)
         history.append({"action": step.action, "result": result.text})
     raise ValueError("project answer tool budget exhausted")

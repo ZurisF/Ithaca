@@ -38,6 +38,7 @@ class ProjectAnswersRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: UUID
     operation_id: UUID
+    source_handle: str = Field(min_length=1, max_length=128)
     snapshot: str = Field(min_length=1, max_length=200_000)
     turns: list["ProjectAnswerTurn"] = Field(max_length=100)
 
@@ -112,19 +113,18 @@ def make_router(token_dependency) -> APIRouter:
         registry.release(source_handle, session_id)
         return {"status": "released"}
 
-    @router.post("/v1/sources/{source_handle}:project-answers")
-    async def project_answers_source(
-        source_handle: str,
+    @router.post("/v1/project-answer-tasks")
+    async def project_answer_task(
         body: ProjectAnswersRequest,
         model: Annotated[ModelAdapter, Depends(get_observer_model)],
     ) -> dict:
-        root = registry.get(source_handle, body.session_id)
+        root = registry.get(body.source_handle, body.session_id)
         import json
 
         result = await observer_tasks.run(
             body.operation_id,
             body.session_id,
-            source_handle,
+            body.source_handle,
             lambda: _project_answer_json(root, body, model),
         )
         return json.loads(result)

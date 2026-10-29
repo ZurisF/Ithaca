@@ -12,7 +12,7 @@ from test_gate4_interview import HEADERS, BlockingModel, Harness
 from test_gate5_basic import PostModel
 
 from app.db import engine
-from app.domain.contracts import ResultView
+from app.domain.contracts import ResultView, SupervisorDecision
 from app.services import finalization, interview_worker
 from app.services.interview_checkpoint import delete_checkpoint, read_finalization_checkpoint
 from app.services.result_render import render_full_qa_markdown, render_report_markdown
@@ -974,3 +974,39 @@ async def test_expired_lease_resumes_and_report_ack_loss_is_idempotent():
             ).one()
         assert report_count == 1
         assert task == ("succeeded", 2)
+
+
+class UnresolvedEndModel(PostModel):
+    """Close every 结束阶段 answer as unresolved, never complete."""
+
+    async def generate_structured(self, **kwargs):
+        if kwargs["operation"] == "supervisor_answer":
+            payload = json.loads(kwargs["messages"][1].content)
+            if "结束阶段" in payload["current_answered_turn"]["answer"]:
+                decision = SupervisorDecision(
+                    user_acts=[{"type": "answer"}],
+                    interviewer_message=None,
+                    plan_action="unresolved",
+                    question=None,
+                )
+                assert kwargs["validate_output"](decision) == []
+                return decision
+        return await super().generate_structured(**kwargs)
+
+
+@pytest.mark.asyncio
+async def test_normal_end_with_only_unresolved_stages_still_post_processes():
+    model = UnresolvedEndModel()
+    async with Harness(model) as harness:
+        session_id, base, _ = await harness.create()
+        for turn_no in range(1, 6):
+            response = await harness.answer(base, turn_no, "结束阶段")
+            assert response.status_code == 200, response.text
+        current = (await harness.client.get(f"{base}/current", headers=HEADERS)).json()
+        assert current["session"]["status"] == "post_processing"
+        assert current["session"]["termination_reason"] == "normal"
+        await finalization.run_finalization(session_id, model)
+        result = (await harness.client.get(f"{base}/full-qa", headers=HEADERS)).json()
+        assert result["session"]["status"] == "completed"
+        assert result["report"] is not None
+        assert result["processing_incomplete"] is False

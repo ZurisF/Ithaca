@@ -29,6 +29,7 @@
 - 2026-10-28 Gate 5 正式回归：新增 `test_gate5_regression.py` 覆盖正常结束、两种反馈/终止行锁顺序、强退与回答/提前完成/迟到赛后结果竞争、结算事务回滚及并发重放、项目答案逐项校验与事后核验事务中断、参考答案完成顺序、失败降级、部分 fan-out 恢复、worker 过期租约与报告 ACK 丢失。真实赛后模型回放 1 passed；双 Runtime 授权目录及失效 handle 降级 2 passed。全量 Python 92 passed、12 skipped；Ruff、格式、`git diff --check`、Web 生产构建通过。跳过项仍为其他显式开启的真实模型、检索、跨进程测试。
 - 2026-10-28 双进程 worker 回放 1 passed：Application 与 Local Runtime 独立进程运行，worker 自动完成赛后处理，本地模型调用 trace 成功转发入库。本次本地模型给出的事后核验缺少已读取行引用，Local Runtime 返回错误，Application 按合同改用快照模型生成项目答案；因此本条验证的是 worker、trace 和降级路径，不把它记为本地定向取证成功。上述单独的授权目录测试已验证本地定向取证成功。
 - 2026-10-28 Gate 5 审查收敛：确认追加共用同一事务函数；赛后模型和 Local Runtime 任务各有独立时限，跨 Runtime HTTP 时限由本地任务预算加传输余量得到；评估在参考答案屏障后一次读取最终 snapshot/turns。Finalization Graph 用显式 Redis 阶段游标恢复节点位置（当前未接 LangGraph 内置 checkpointer），游标丢失时从 PostgreSQL 业务事实幂等重跑；上游设计和施工书未改写。Gate 4/5 定向回归 35 passed，新增阶段游标保留/丢失两种恢复用例均通过；完整 Python 回归 94 passed、12 skipped。
+- 2026-10-28 Gate 5 审查收敛三处偏离，代码回归设计文本：正常结束不再套用完成 Stage 门槛，全部 Stage 以 unresolved 收尾的正常耗尽同样进入 `post_processing` 并产出报告（实现设计 8.3）；本地项目答案接口回归 11.2 节 `POST /v1/project-answer-tasks`，`source_handle` 移入请求体，session 绑定校验不变；删除赛后事后核验的行号证据硬校验，评估与报告 Prompt 改为明示「事后核验」区块由模型追加、可能不准确（Observer 侧引用校验仍属 Gate 2 已验收范围）。新增全部 unresolved 正常结束回归（stash 验证改前必红）与本地端点契约测试；全量 Python 回归 96 passed、12 skipped；Ruff 与格式检查通过。上游设计文档未改动。
 - Web 和两个 Runtime 均可启动且健康检查通过。Codex 内置浏览器会拦截跨端口的本机 8100 请求，故本轮未把新目录选择页面记为手工通过。
 
 ## 接下来的施工依赖
@@ -38,5 +39,7 @@
 3. 终态路径 Redis checkpoint 删除失败窗口仍待跨 Gate 故障回归；Gate 6 需将当前通用 `current_changed` 通知对齐设计文档列出的命名 SSE 事件。
 4. Compact 持续失败时，Supervisor 的 `recent_turns` 可能随已回答 turn 增长；后续上量与 P95/P99 测试需验证上下文上限与恢复延迟，再决定符合“历史不遗漏”合同的处理方式。worker 扫描的 `SKIP LOCKED` 只在短扫描事务内生效，处理期间仍由 session execution lock 和 PostgreSQL 条件发布保障。
 5. 赛后 `post_tasks.attempt_count` 最多领取 3 次，每次逻辑模型调用由 adapter 最多尝试 3 次；明确失败不再领取，崩溃和租约过期重领时物理调用最多可能达到 9 次，业务发布仍至多一次。`terminate` 当前用 PostgreSQL session 行锁与发布前状态复验串行化，没有额外取得设计文档 6.5 节所写的 Redis 执行锁；Gate 6～7 审查该偏离时应以故障窗口结果判断，不机械加锁。
+6. Interview 图与 Finalization 图一致，均未接 LangGraph 内置 checkpointer（两侧裸 `compile()`），以 PostgreSQL 事实加手写 Redis 投影（interrupt JSON / 阶段游标）恢复；`write_checkpoint` 的读改写安全目前依赖调用方先持执行锁的约定。机制迁移到官方 checkpointer 应作为独立任务并重跑全部恢复回归。
+7. 赛后 task 的 `work()` 内任何异常都会把任务置为 `failed` 且不可再领取：模型失败已有 adapter 预算，但瞬时基础设施错误（如复用题库理想答案时的数据库读抖动）也会永久烧掉该可空参考产物。租约 20 分钟为硬编码，与可配置任务上限（900 秒）的不变式没有断言保护；checkpoint 读写每次新建 Redis 连接。三者待后续 Gate 一并硬化。
 
 以上剩余项仍属于同一交付范围。当前版本是可审查的施工进度，尚不是完整产品。

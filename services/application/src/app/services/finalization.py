@@ -106,8 +106,10 @@ async def terminate(
 
 async def terminate_locked(db: AsyncSession, session_id: UUID, reason: str) -> None:
     """The caller holds the session row lock; all interview endings share this rule."""
+    # Design 8.3: normal exhaustion always post-processes; the complete-stage
+    # gate only rules early_finish and safety_cap.
     stages = await interview_repo.stage_results(db, session_id)
-    post = any(stage["result"] == "complete" for stage in stages)
+    post = reason == "normal" or any(stage["result"] == "complete" for stage in stages)
     await interview_repo.terminate_interview(db, session_id, reason, post)
 
 
@@ -157,7 +159,10 @@ async def result_view(db: AsyncSession, identity: Identity, session_id: UUID) ->
         turn_rows = await repo.turns(db, session_id)
         report = await repo.get_report(db, session_id)
         complete_stages = await interview_repo.stage_results(db, session_id)
-        eligible_for_report = any(stage["result"] == "complete" for stage in complete_stages)
+        # Normal exhaustion always owes a report; the gate only rules early endings.
+        eligible_for_report = row["termination_reason"] == "normal" or any(
+            stage["result"] == "complete" for stage in complete_stages
+        )
         incomplete = row["status"] == "completed" and eligible_for_report and report is None
     return ResultView(
         session=SessionView.model_validate(dict(row)),
@@ -290,13 +295,14 @@ async def _project_answers(session_id: UUID, model: ModelAdapter) -> str:
                     timeout=settings.local_task_deadline_seconds + 10, trust_env=False
                 ) as client:
                     response = await client.post(
-                        f"{settings.local_runtime_url}/v1/sources/{handle}:project-answers",
+                        f"{settings.local_runtime_url}/v1/project-answer-tasks",
                         headers={"Authorization": f"Bearer {settings.desktop_instance_token}"},
                         json={
                             "session_id": str(session_id),
                             "operation_id": str(
                                 uuid5(NAMESPACE_URL, f"{session_id}:project_answers")
                             ),
+                            "source_handle": handle,
                             "snapshot": snapshot,
                             "turns": payload["turns"],
                         },
