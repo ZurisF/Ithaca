@@ -25,6 +25,21 @@ from app.settings import get_settings
 from model_adapter import ModelAdapter
 
 router = APIRouter(prefix="/v1/interviews", tags=["interviews"])
+# Design 10.6: the only named events the event stream may forward; the
+# contract test locks this list against the design document and producers.
+SSE_EVENT_NAMES = frozenset(
+    {
+        "question_ready",
+        "snapshot_confirmation_required",
+        "stage_changed",
+        "post_processing_started",
+        "post_processing_progress",
+        "turn_processing_failed",
+        "session_completed",
+        "session_aborted",
+    }
+)
+_FORWARDED_EVENT_PAYLOADS = frozenset(name.encode("ascii") for name in SSE_EVENT_NAMES)
 Database = Annotated[AsyncSession, Depends(get_db)]
 CurrentIdentity = Annotated[Identity, Depends(get_identity)]
 CurrentModel = Annotated[ModelAdapter, Depends(get_model_adapter)]
@@ -196,16 +211,7 @@ async def events(
                 )
                 if message is None:
                     yield ": keepalive\n\n"
-                elif message.get("data") in {
-                    b"question_ready",
-                    b"snapshot_confirmation_required",
-                    b"stage_changed",
-                    b"post_processing_started",
-                    b"post_processing_progress",
-                    b"turn_processing_failed",
-                    b"session_completed",
-                    b"session_aborted",
-                }:
+                elif message.get("data") in _FORWARDED_EVENT_PAYLOADS:
                     event = message["data"].decode("ascii")
                     yield f"event: {event}\ndata: {{}}\n\n"
         finally:

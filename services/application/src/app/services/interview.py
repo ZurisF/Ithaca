@@ -804,7 +804,7 @@ async def retry_decision(
         await owned_session(db, session_id, identity, lock=False)
     async with execution_lock(session_id):
         checkpoint = await read_checkpoint(session_id)
-        if checkpoint is None or checkpoint.get("awaiting") != "decision_retry":
+        if checkpoint is not None and checkpoint.get("awaiting") != "decision_retry":
             raise AppError(409, "retry_not_available", "当前没有可重试的面试决策。")
         row, _snapshot, _plan, _latest, _turns, trigger = await _load_context(
             db, identity, session_id
@@ -817,7 +817,7 @@ async def retry_decision(
             session_id,
             model,
             retriever,
-            resume={"kind": "decision_retry"},
+            resume={"kind": "decision_retry"} if checkpoint is not None else None,
         )
 
 

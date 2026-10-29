@@ -92,7 +92,7 @@ export function Results({ result, headers, onRefresh }: {
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
   const terminal = result.session.status === "completed" || result.session.status === "aborted";
-  const showReport = terminal && result.session.status !== "aborted";
+  const showReport = terminal && (result.report !== null || result.processing_incomplete);
 
   async function feedback(turnNo: number, body: FeedbackRequest) {
     const response = await api.PUT("/v1/interviews/{session_id}/turns/{turn_no}/feedback", {

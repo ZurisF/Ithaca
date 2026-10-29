@@ -1,5 +1,7 @@
 """Saver-specific recovery: interrupt persistence across saver rebuilds and cleanup."""
 
+import json
+
 import pytest
 from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 from sqlalchemy import text
@@ -54,6 +56,7 @@ async def test_answer_interrupt_persists_across_saver_rebuild():
         values = await saver_values(session_id, INTERVIEW_NAMESPACE)
         assert values["awaiting"] == "answer"
         assert service._state_trigger(values["trigger"]).next_turn_no == 2
+        assert "abcdefghijk" not in json.dumps(values, ensure_ascii=False, default=str)
         async with engine.connect() as connection:
             stored = await connection.scalar(
                 text("SELECT answer FROM app.turns WHERE session_id = :id AND turn_no = 1"),
@@ -112,6 +115,28 @@ async def test_decision_retry_interrupt_persists_across_saver_rebuild():
         assert model.supervisor_calls == before + 1
         values = await saver_values(session_id, INTERVIEW_NAMESPACE)
         assert values["awaiting"] == "answer"
+
+
+@pytest.mark.asyncio
+async def test_explicit_retry_rebuilds_owed_decision_after_checkpoint_loss():
+    model = ScriptedModel()
+    model.fail_answer_once = True
+    async with Harness(model) as harness:
+        session_id, base, _ = await harness.create()
+        failed = await harness.answer(base, 1, "继续回答")
+        assert failed.json()["awaiting"] == "decision_retry"
+        await delete_checkpoint(session_id)
+        assert await saver_values(session_id, INTERVIEW_NAMESPACE) is None
+        before = model.supervisor_calls
+        retried = await harness.client.post(f"{base}/decision:retry", headers=HEADERS)
+        assert retried.status_code == 200, retried.text
+        assert retried.json()["current_turn"]["turn_no"] == 2
+        assert retried.json()["awaiting"] == "answer"
+        assert model.supervisor_calls == before + 1
+        await delete_checkpoint(session_id)
+        unavailable = await harness.client.post(f"{base}/decision:retry", headers=HEADERS)
+        assert unavailable.status_code == 409
+        assert unavailable.json()["error"]["code"] == "retry_not_available"
 
 
 @pytest.mark.asyncio

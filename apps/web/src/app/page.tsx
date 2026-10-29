@@ -53,6 +53,7 @@ export default function Home() {
   const [confirmExit, setConfirmExit] = useState(false);
   const pendingOpinionKey = useRef<string | null>(null);
   const pendingObserveKey = useRef<string | null>(null);
+  const activeSessionId = useRef<string | null>(null);
 
   useEffect(() => {
     setCorrectionText(interview?.pending_correction ?? "");
@@ -61,6 +62,15 @@ export default function Home() {
   const loadSession = useCallback(async (id: string) => {
     const current = await api.GET("/v1/interviews/{session_id}", { params: { path: { session_id: id } }, headers });
     if (!current.data) throw new Error(errorMessage(current.error));
+    if (activeSessionId.current !== id) {
+      activeSessionId.current = id;
+      setAnswerText("");
+      setOpinion("");
+      setConfirmEmpty(false);
+      setConfirmationNotice("");
+      pendingOpinionKey.current = null;
+      pendingObserveKey.current = null;
+    }
     setSession(current.data);
     setDirection(current.data.interview_direction ?? "project_overview");
     setSelected(current.data.selected_sections);
