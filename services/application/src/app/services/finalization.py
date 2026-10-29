@@ -32,10 +32,11 @@ from app.repositories import interview as interview_repo
 from app.repositories import prepare as prepare_repo
 from app.services.errors import AppError
 from app.services.interview_checkpoint import (
+    FINALIZATION_NAMESPACE,
+    checkpoint_saver,
     delete_checkpoint,
+    graph_config,
     notify_current_changed,
-    read_finalization_checkpoint,
-    write_finalization_checkpoint,
 )
 from app.services.session_access import owned_session
 from app.settings import get_settings
@@ -53,9 +54,9 @@ def _safe(value: str, limit: int) -> str:
         raise AppError(422, "safety_filter_rejected", "赛后内容未通过安全检查。") from exc
 
 
-async def _changed(session_id: UUID) -> None:
+async def _changed(session_id: UUID, event: str = "post_processing_progress") -> None:
     try:
-        await notify_current_changed(session_id)
+        await notify_current_changed(session_id, event)
     except Exception:  # noqa: BLE001
         logger.warning("finalization_notification_failed")
 
@@ -100,7 +101,10 @@ async def terminate(
         current = await owned_session(db, session_id, identity, lock=False)
     if changed:
         await _clear_checkpoint(session_id)
-        await _changed(session_id)
+        await _changed(
+            session_id,
+            "session_aborted" if current["status"] == "aborted" else "post_processing_started",
+        )
     return SessionView.model_validate(dict(current))
 
 
@@ -446,7 +450,7 @@ async def _report(session_id: UUID, model: ModelAdapter) -> str:
 
 
 async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
-    """Resume the dependency graph from its disposable Redis phase checkpoint."""
+    """Start or resume the checkpointer-backed finalization graph."""
 
     async def load(_state: FinalizationState) -> FinalizationState:
         async with session_factory() as db, db.begin():
@@ -455,20 +459,10 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
             )
         if status != "post_processing":
             return {"route": "stop"}
-        phase = await read_finalization_checkpoint(session_id)
-        return {
-            "route": {
-                "settled": "references",
-                "references_done": "evaluations",
-                "evaluations_done": "report",
-                "evaluations_failed": "complete",
-                "report_done": "complete",
-            }.get(phase, "settle")
-        }
+        return {"route": "continue"}
 
     async def settle_node(_state: FinalizationState) -> FinalizationState:
         await settle(session_id)
-        await write_finalization_checkpoint(session_id, "settled")
         return {"route": "continue"}
 
     async def references(_state: FinalizationState) -> FinalizationState:
@@ -482,7 +476,7 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
         )
         if not all(state in {"succeeded", "failed"} for state in states):
             return {"route": "stop"}
-        await write_finalization_checkpoint(session_id, "references_done")
+        await _changed(session_id)
         return {"route": "continue"}
 
     async def evaluations(_state: FinalizationState) -> FinalizationState:
@@ -499,16 +493,14 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
         if not all(state in {"succeeded", "failed"} for state in states):
             return {"route": "stop"}
         if all(state == "succeeded" for state in states):
-            await write_finalization_checkpoint(session_id, "evaluations_done")
+            await _changed(session_id)
             return {"route": "report"}
-        await write_finalization_checkpoint(session_id, "evaluations_failed")
         return {"route": "complete"}
 
     async def report_node(_state: FinalizationState) -> FinalizationState:
         state = await _report(session_id, model)
         if state not in {"succeeded", "failed"}:
             return {"route": "stop"}
-        await write_finalization_checkpoint(session_id, "report_done")
         return {"route": "complete"}
 
     async def complete(_state: FinalizationState) -> FinalizationState:
@@ -520,8 +512,7 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
             """),
                 {"id": session_id},
             )
-        await _clear_checkpoint(session_id)
-        await _changed(session_id)
+        await _changed(session_id, "session_completed")
         return {"route": "stop"}
 
     graph = StateGraph(FinalizationState)
@@ -539,11 +530,7 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
         "load",
         lambda state: state["route"],
         {
-            "settle": "settle",
-            "references": "references",
-            "evaluations": "evaluations",
-            "report": "report",
-            "complete": "complete",
+            "continue": "settle",
             "stop": END,
         },
     )
@@ -560,4 +547,16 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
         "report", lambda state: state["route"], {"complete": "complete", "stop": END}
     )
     graph.add_edge("complete", END)
-    await graph.compile().ainvoke({"session_id": session_id})
+    config = graph_config(session_id, FINALIZATION_NAMESPACE)
+    async with checkpoint_saver() as saver:
+        compiled = graph.compile(checkpointer=saver)
+        snapshot = await compiled.aget_state(config)
+        graph_input = None if snapshot.next else {"session_id": session_id}
+        await compiled.ainvoke(graph_input, config=config)
+    async with session_factory() as db, db.begin():
+        status = await db.scalar(
+            text("SELECT status FROM app.interview_sessions WHERE id = :id"),
+            {"id": session_id},
+        )
+    if status in {"completed", "aborted"}:
+        await _clear_checkpoint(session_id)

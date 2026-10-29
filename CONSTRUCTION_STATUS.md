@@ -12,7 +12,8 @@
 | Gate 3 题库、检索与首题 | 已通过本机验收 | 11 个白名单文件的 573 条一级题去重后导入 537 道，重复运行不覆盖已有行。在线 BGE-M3、pgvector、FTS、RRF、topic 软权重和本机 BGE reranker 已接通；固定种子真实检索命中。首题使用真实 Supervisor 发布，候选 ID 仅在服务端精确匹配；检索超时可降级为空候选，重复 start 只发布一题，PostgreSQL 提交先于 SSE 通知，通知丢失后 GET 当前视图可恢复。 |
 | Gate 4 实时面试闭环 | 面试范围已通过本机验收 | LangGraph 编排回答、检索、Supervisor、条件发布与 Stage 切换；原始回答仅写 PostgreSQL，模型和 compact 使用过滤文本；Redis 保存 interrupt、未发布决策和累计 compact。重复回答、显式决策重试、可编辑更正确认、Stage 关闭后的下一 Stage 首题、100 题安全上限与欠决策恢复已有正式路径。受控集成回归、超过 40 个 turn 的 compact 重建、真实模型两 Stage 对话及浏览器回答/刷新路径已验证。 |
 | Gate 5 结束、赛后处理与结果 | 已通过本机验收 | 自然结束、提前完成、强退、100 题安全上限的终止路径已验证；题库结算与冻结反馈并发、事务回滚和 ACK 丢失重放均只计一次。参考答案顺序互换、单支失败、评估失败、报告失败、事后核验原子追加、部分 fan-out 重启、过期租约和迟到结果均经 PostgreSQL/Redis 故障注入；报告输入隔离及三个 Markdown 导出与当前事实一致。真实赛后模型 1 passed，Local Runtime 授权目录与失效 handle 降级 2 passed；双进程 worker 自动赛后处理及 trace 转发 1 passed。 |
-| Gate 6～7 | 未完成 | 完整结果 Web、策展、删除和跨 Gate 故障窗口回归尚未验收。 |
+| Gate 6 用户 Web | 页面与 checkpointer 代码已接入，待独立回归验收 | 用户 Web 已接准备、面试、结果双页签、八维雷达图与标签、反馈、三个导出、提前完成与二次确认强退；SSE 已使用命名事件。Interview/Finalization Graph 接入 LangGraph Redis checkpointer，使用本机现有 Redis Stack 7.4。固定浏览器旅程和完整故障窗口回归待独立实例执行。 |
+| Gate 7 策展、删除与完整质量回归 | 未完成 | 策展、删除和跨 Gate 故障窗口回归尚未验收。 |
 
 ## 最近验证
 
@@ -31,15 +32,20 @@
 - 2026-10-28 Gate 5 审查收敛：确认追加共用同一事务函数；赛后模型和 Local Runtime 任务各有独立时限，跨 Runtime HTTP 时限由本地任务预算加传输余量得到；评估在参考答案屏障后一次读取最终 snapshot/turns。Finalization Graph 用显式 Redis 阶段游标恢复节点位置（当前未接 LangGraph 内置 checkpointer），游标丢失时从 PostgreSQL 业务事实幂等重跑；上游设计和施工书未改写。Gate 4/5 定向回归 35 passed，新增阶段游标保留/丢失两种恢复用例均通过；完整 Python 回归 94 passed、12 skipped。
 - 2026-10-28 Gate 5 审查收敛三处偏离，代码回归设计文本：正常结束不再套用完成 Stage 门槛，全部 Stage 以 unresolved 收尾的正常耗尽同样进入 `post_processing` 并产出报告（实现设计 8.3）；本地项目答案接口回归 11.2 节 `POST /v1/project-answer-tasks`，`source_handle` 移入请求体，session 绑定校验不变；删除赛后事后核验的行号证据硬校验，评估与报告 Prompt 改为明示「事后核验」区块由模型追加、可能不准确（Observer 侧引用校验仍属 Gate 2 已验收范围）。新增全部 unresolved 正常结束回归（stash 验证改前必红）与本地端点契约测试；全量 Python 回归 96 passed、12 skipped；Ruff 与格式检查通过。上游设计文档未改动。
 - Web 和两个 Runtime 均可启动且健康检查通过。Codex 内置浏览器会拦截跨端口的本机 8100 请求，故本轮未把新目录选择页面记为手工通过。
+- 2026-10-28 Gate 5 独立代码审查（未运行新测试）：对照 `PRODUCT_DEVELOPMENT.md` 与 `IMPLEMENTATION_DESIGN.md` 复核终止、结算、赛后依赖链、降级规则与结果投影的代码及测试映射。结论：符合上游合同，FW-POST-01～08 均有对应自动化用例，未发现第二业务事实或过度设计；第 5、6、7 条记录的偏离经复核维持原评估。新发现两项待办与一项轻微重复，见“接下来的施工依赖”第 8～10 条。
+- 2026-10-28 Gate 6 施工：补齐用户 Web 的结果、反馈、导出与结束交互；Interview/Finalization Graph 改用 LangGraph Redis checkpointer，Compose 指向本机已有 `redis/redis-stack-server:7.4.0-v8` 并按镜像默认入口加载模块。Gate 3 首题/重试 4 passed，Gate 4 非旧 checkpoint 注入用例 7 passed；Web 类型检查和构建通过。旧测试中的手写 Redis key/阶段游标故障注入尚需按新 saver seam 改写，完整恢复与浏览器固定旅程由独立实例回归。
 
 ## 接下来的施工依赖
 
 1. Gate 2 的原生目录选择器手工核验依用户要求后补。本地 operation ID 只在当前进程内短期合并重复观察；重启后可再次调用模型，业务发布仍由 Application 的内容比较与条件写入保障。
-2. 依 Gate 6～7 完成结果、策展、删除和完整 Web，并逐项扩充 `tests/fault_windows` 中尚未自动化的跨 Gate 异常窗口回归。
-3. 终态路径 Redis checkpoint 删除失败窗口仍待跨 Gate 故障回归；Gate 6 需将当前通用 `current_changed` 通知对齐设计文档列出的命名 SSE 事件。
+2. 独立回归 Gate 6 的固定浏览器旅程、Redis checkpoint 丢失/恢复与旧故障注入用例；继续 Gate 7 策展、删除，并逐项扩充 `tests/fault_windows` 中尚未自动化的跨 Gate 异常窗口回归。
+3. 终态路径 Redis checkpoint 删除失败窗口仍待跨 Gate 故障回归。
 4. Compact 持续失败时，Supervisor 的 `recent_turns` 可能随已回答 turn 增长；后续上量与 P95/P99 测试需验证上下文上限与恢复延迟，再决定符合“历史不遗漏”合同的处理方式。worker 扫描的 `SKIP LOCKED` 只在短扫描事务内生效，处理期间仍由 session execution lock 和 PostgreSQL 条件发布保障。
 5. 赛后 `post_tasks.attempt_count` 最多领取 3 次，每次逻辑模型调用由 adapter 最多尝试 3 次；明确失败不再领取，崩溃和租约过期重领时物理调用最多可能达到 9 次，业务发布仍至多一次。`terminate` 当前用 PostgreSQL session 行锁与发布前状态复验串行化，没有额外取得设计文档 6.5 节所写的 Redis 执行锁；Gate 6～7 审查该偏离时应以故障窗口结果判断，不机械加锁。
-6. Interview 图与 Finalization 图一致，均未接 LangGraph 内置 checkpointer（两侧裸 `compile()`），以 PostgreSQL 事实加手写 Redis 投影（interrupt JSON / 阶段游标）恢复；`write_checkpoint` 的读改写安全目前依赖调用方先持执行锁的约定。机制迁移到官方 checkpointer 应作为独立任务并重跑全部恢复回归。
-7. 赛后 task 的 `work()` 内任何异常都会把任务置为 `failed` 且不可再领取：模型失败已有 adapter 预算，但瞬时基础设施错误（如复用题库理想答案时的数据库读抖动）也会永久烧掉该可空参考产物。租约 20 分钟为硬编码，与可配置任务上限（900 秒）的不变式没有断言保护；checkpoint 读写每次新建 Redis 连接。三者待后续 Gate 一并硬化。
+6. LangGraph Redis checkpointer 已接入 Interview 与 Finalization 两图；旧手写 checkpoint 故障注入需要改用 saver seam 后重跑全部恢复回归。
+7. 赛后 task 的 `work()` 内任何异常都会把任务置为 `failed` 且不可再领取：模型失败已有 adapter 预算，但瞬时基础设施错误（如复用题库理想答案时的数据库读抖动）也会永久烧掉该可空参考产物。租约 20 分钟为硬编码，与可配置任务上限（900 秒）的不变式没有断言保护；saver 目前每次打开新 Redis 连接。三者待后续 Gate 一并硬化。
+8. 报告门槛规则（`normal` 结束或至少一个 `complete` Stage）目前在 `finalization.terminate_locked` 与 `finalization.result_view` 两处各实现一遍，违背施工书 3.5“一个业务不变量只保留一套权威实现”；应收敛为 `domain/rules.py` 中的单一判定，避免两处漂移导致“进入赛后但结果页判为不合格”之类的矛盾展示。
+9. 强退未实现设计 6.5 步骤 6 的“提交后取消可取消的在途调用”（产品文档表述为“尽力取消”）：当前没有取消机制，迟到模型结果完全由发布前状态复验拒绝，`_run_task` 的 `stopped` 路径与三个强退竞争测试已覆盖该行为。与第 5 条执行锁偏离同类，正确性由条件发布保障；Gate 6～7 故障窗口审查时与第 5 条一并判定是否需要真实取消，此前不机械补建。
+10. 轻微重复，触及相关文件时顺手收敛即可：`put_feedback` 的差评原因白名单在 router Schema 与 service 各校验一次；`full-qa` 投影复用 `ResultView` 顺带携带 report 字段造成轻微超取。均无行为影响。
 
 以上剩余项仍属于同一交付范围。当前版本是可审查的施工进度，尚不是完整产品。

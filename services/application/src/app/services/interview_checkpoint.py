@@ -1,112 +1,65 @@
-"""Redis execution lock and disposable interview interrupt projection."""
+"""LangGraph Redis persistence, interview execution lock and disposable events."""
 
 import asyncio
-import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from uuid import UUID, uuid4
 
+from langgraph.checkpoint.redis.aio import AsyncRedisSaver
 from redis.asyncio import Redis
 
 from app.services.errors import AppError
 from app.settings import get_settings
 
+INTERVIEW_NAMESPACE = "interview"
+FINALIZATION_NAMESPACE = "finalization"
 
-def checkpoint_key(session_id: UUID) -> str:
-    return f"interview:{session_id}:checkpoint"
+
+def graph_config(session_id: UUID, namespace: str) -> dict[str, dict[str, str]]:
+    return {
+        "configurable": {
+            "thread_id": f"{session_id}:{namespace}",
+        }
+    }
 
 
-def finalization_checkpoint_key(session_id: UUID) -> str:
-    return f"interview:{session_id}:finalization"
+@asynccontextmanager
+async def checkpoint_saver() -> AsyncIterator[AsyncRedisSaver]:
+    """Open the production LangGraph saver with the active-checkpoint retention window."""
+    async with AsyncRedisSaver.from_conn_string(
+        get_settings().redis_url,
+        ttl={"default_ttl": 60 * 24 * 30, "refresh_on_read": True},
+    ) as saver:
+        yield saver
+
+
+async def read_checkpoint(session_id: UUID, namespace: str = INTERVIEW_NAMESPACE) -> dict | None:
+    """Read the latest LangGraph channel values for public projection and recovery."""
+    async with checkpoint_saver() as saver:
+        checkpoint = await saver.aget(graph_config(session_id, namespace))
+    if checkpoint is None:
+        return None
+    values = checkpoint.get("channel_values")
+    return dict(values) if isinstance(values, dict) else None
 
 
 async def delete_checkpoint(session_id: UUID) -> None:
+    """Delete every graph namespace for one session after terminal publication."""
+    async with checkpoint_saver() as saver:
+        await saver.adelete_thread(f"{session_id}:{INTERVIEW_NAMESPACE}")
+        await saver.adelete_thread(f"{session_id}:{FINALIZATION_NAMESPACE}")
+
+
+async def notify_current_changed(session_id: UUID, event: str) -> None:
     redis = Redis.from_url(get_settings().redis_url)
     try:
-        await redis.delete(checkpoint_key(session_id), finalization_checkpoint_key(session_id))
-    finally:
-        await redis.aclose()
-
-
-async def read_finalization_checkpoint(session_id: UUID) -> str | None:
-    redis = Redis.from_url(get_settings().redis_url)
-    try:
-        raw = await redis.get(finalization_checkpoint_key(session_id))
-        return raw.decode() if raw else None
-    finally:
-        await redis.aclose()
-
-
-async def write_finalization_checkpoint(session_id: UUID, phase: str) -> None:
-    redis = Redis.from_url(get_settings().redis_url)
-    try:
-        await redis.set(finalization_checkpoint_key(session_id), phase, ex=60 * 60 * 24 * 30)
-    finally:
-        await redis.aclose()
-
-
-async def read_checkpoint(session_id: UUID) -> dict | None:
-    redis = Redis.from_url(get_settings().redis_url)
-    try:
-        raw = await redis.get(checkpoint_key(session_id))
-        return json.loads(raw) if raw else None
-    finally:
-        await redis.aclose()
-
-
-async def write_checkpoint(
-    session_id: UUID,
-    *,
-    awaiting: str,
-    error: str | None = None,
-    pending: dict | None = None,
-) -> None:
-    redis = Redis.from_url(get_settings().redis_url)
-    try:
-        raw = await redis.get(checkpoint_key(session_id))
-        old = json.loads(raw) if raw else {}
-        state = {
-            "awaiting": awaiting,
-            "last_error_code": error,
-            "compact": old.get("compact"),
-            "compacted_through_turn_no": old.get("compacted_through_turn_no", 0),
-        }
-        if pending is not None:
-            state["pending"] = pending
-        await redis.set(
-            checkpoint_key(session_id),
-            json.dumps(state, ensure_ascii=False),
-            ex=60 * 60 * 24 * 30,
-        )
-    finally:
-        await redis.aclose()
-
-
-async def write_compact(session_id: UUID, *, compact: str, through_turn_no: int) -> None:
-    redis = Redis.from_url(get_settings().redis_url)
-    try:
-        raw = await redis.get(checkpoint_key(session_id))
-        state = json.loads(raw) if raw else {}
-        if through_turn_no <= state.get("compacted_through_turn_no", 0):
-            return
-        state["compact"] = compact
-        state["compacted_through_turn_no"] = through_turn_no
-        await redis.set(
-            checkpoint_key(session_id), json.dumps(state, ensure_ascii=False), ex=60 * 60 * 24 * 30
-        )
-    finally:
-        await redis.aclose()
-
-
-async def notify_current_changed(session_id: UUID) -> None:
-    redis = Redis.from_url(get_settings().redis_url)
-    try:
-        await redis.publish(f"interview:{session_id}:events", "current_changed")
+        await redis.publish(f"interview:{session_id}:events", event)
     finally:
         await redis.aclose()
 
 
 @asynccontextmanager
-async def execution_lock(session_id: UUID):
+async def execution_lock(session_id: UUID) -> AsyncIterator[None]:
     redis = Redis.from_url(get_settings().redis_url)
     key = f"interview:{session_id}:execution"
     token = str(uuid4())

@@ -196,8 +196,18 @@ async def events(
                 )
                 if message is None:
                     yield ": keepalive\n\n"
-                elif message.get("data") == b"current_changed":
-                    yield "event: current_changed\ndata: {}\n\n"
+                elif message.get("data") in {
+                    b"question_ready",
+                    b"snapshot_confirmation_required",
+                    b"stage_changed",
+                    b"post_processing_started",
+                    b"post_processing_progress",
+                    b"turn_processing_failed",
+                    b"session_completed",
+                    b"session_aborted",
+                }:
+                    event = message["data"].decode("ascii")
+                    yield f"event: {event}\ndata: {{}}\n\n"
         finally:
             await pubsub.aclose()
             await redis.aclose()

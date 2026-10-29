@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../generated/api";
 import { api } from "../lib/api";
+import { Results } from "./results";
 
 type Session = components["schemas"]["SessionView"];
 type Summary = components["schemas"]["SessionSummary"];
@@ -13,6 +14,7 @@ type Section = components["schemas"]["SectionRef"];
 type Direction = components["schemas"]["Direction"];
 type SourceInventory = components["schemas"]["SourceInventory"];
 type ModelReadiness = components["schemas"]["ModelReadiness"];
+type Result = components["schemas"]["ResultView"];
 
 const headers = { "X-Dev-User": process.env.NEXT_PUBLIC_DEV_USER_ID ?? "00000000-0000-4000-8000-000000000001" };
 const directions: Record<Direction, string> = {
@@ -37,6 +39,7 @@ export default function Home() {
   const [modelReadiness, setModelReadiness] = useState<ModelReadiness | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [interview, setInterview] = useState<Interview | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [markdown, setMarkdown] = useState("");
   const [opinion, setOpinion] = useState("");
   const [answerText, setAnswerText] = useState("");
@@ -47,6 +50,7 @@ export default function Home() {
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
   const pendingOpinionKey = useRef<string | null>(null);
   const pendingObserveKey = useRef<string | null>(null);
 
@@ -84,12 +88,18 @@ export default function Home() {
       });
       if (!response.data) throw new Error(errorMessage(response.error));
       setInterview(response.data);
-    } else setInterview(null);
+      const history = await api.GET("/v1/interviews/{session_id}/full-qa", {
+        params: { path: { session_id: id } }, headers,
+      });
+      if (!history.data) throw new Error(errorMessage(history.error));
+      setResult(history.data);
+    } else { setInterview(null); setResult(null); }
+    setConfirmExit(false);
     window.history.replaceState(null, "", `/?session=${encodeURIComponent(id)}`);
   }, []);
 
   useEffect(() => {
-    if (!session || session.status !== "interviewing") return;
+    if (!session || !["interviewing", "post_processing"].includes(session.status)) return;
     const id = session.id;
     const controller = new AbortController();
     const baseUrl = process.env.NEXT_PUBLIC_APPLICATION_URL ?? "http://127.0.0.1:8100";
@@ -100,6 +110,10 @@ export default function Home() {
       if (response.data && !controller.signal.aborted) {
         setInterview(response.data);
         setSession(response.data.session);
+        const history = await api.GET("/v1/interviews/{session_id}/full-qa", {
+          params: { path: { session_id: id } }, headers,
+        });
+        if (history.data && !controller.signal.aborted) setResult(history.data);
       }
     }
     async function subscribe() {
@@ -119,7 +133,7 @@ export default function Home() {
             buffer += decoder.decode(value, { stream: true });
             const parts = buffer.split("\n\n");
             buffer = parts.pop() ?? "";
-            if (parts.some(part => part.includes("event: current_changed") || part.includes(": connected"))) await refresh();
+            if (parts.some(part => part.includes("event:") || part.includes(": connected"))) await refresh();
           }
         } catch { /* Reconnect and read the PostgreSQL-backed current view. */ }
         if (!controller.signal.aborted) await new Promise(resolve => setTimeout(resolve, 3000));
@@ -164,11 +178,14 @@ export default function Home() {
 
   return <main className="shell">
     <header className="masthead">
-      <p className="eyebrow">PROJECT INTERVIEW LAB · 准备工作台</p>
+      <p className="eyebrow">PROJECT INTERVIEW LAB · 面试工作台</p>
       <h1>让项目经验经得起追问</h1>
-      <p className="lead">整理真实项目材料，确定面试范围，再生成阶段计划。</p>
+      <p className="lead">整理项目材料、完成面试，并回看完整问答与复盘报告。</p>
     </header>
-    {error && <div className="error" role="alert">{error}</div>}
+    {error && <div className="error" role="alert">{error} <button className="secondary" onClick={() => void run(async () => {
+      if (session) await loadSession(session.id);
+      else window.location.reload();
+    })}>重新读取</button></div>}
     <section className="panel" aria-labelledby="sessions-title">
       <div className="section-head"><div><p className="step">01 / SESSION</p><h2 id="sessions-title">选择一场面试</h2></div>
         <button disabled={busy} onClick={() => void run(async () => {
@@ -301,14 +318,18 @@ export default function Home() {
               params: { path: { session_id: session.id } }, headers,
             });
             if (!response.data) throw new Error(errorMessage(response.error));
-            setInterview(response.data);
-            setSession(response.data.session);
+            await loadSession(session.id);
           })}>{busy ? "进入面试中…" : "开始面试"}</button></div>}
       </section>}
       {interview && <section className="panel" aria-labelledby="interview-title">
         <p className="step">05 / INTERVIEW</p><h2 id="interview-title">当前面试</h2>
         {interview.current_stage_index !== null && interview.plan &&
           <p className="muted">阶段 {interview.current_stage_index + 1}：{interview.plan.stages[interview.current_stage_index]?.title}</p>}
+        {interview.plan && interview.session.status === "interviewing" && <ol className="progress-list">
+          {interview.plan.stages.map((stage, index) => <li key={stage.id} className={index === interview.current_stage_index ? "current" : ""}>
+            {stage.title}{index < (interview.current_stage_index ?? 0) ? " · 已结束" : ""}
+          </li>)}
+        </ol>}
         {interview.previous_turn?.interviewer_message &&
           <p className="muted">面试官：{interview.previous_turn.interviewer_message}</p>}
         {interview.awaiting === "snapshot_confirmation" ? <>
@@ -328,8 +349,7 @@ export default function Home() {
               if (response.data.awaiting === "snapshot_confirmation" && response.data.pending_correction !== correctionText)
                 setConfirmationNotice("敏感内容已替换。请检查最终文字并再次确认。");
               else setConfirmationNotice("");
-              setInterview(response.data); setSession(response.data.session);
-              if (response.data.awaiting !== "snapshot_confirmation") await loadSession(session.id);
+              await loadSession(session.id);
             })}>确认写入快照</button>
             <button disabled={busy} onClick={() => void run(async () => {
               const response = await api.POST("/v1/interviews/{session_id}/snapshot-corrections:resolve", {
@@ -337,7 +357,7 @@ export default function Home() {
                 body: { turn_no: interview.current_turn!.turn_no, decision: "do_not_write" },
               });
               if (!response.data) throw new Error(errorMessage(response.error));
-              setConfirmationNotice(""); setInterview(response.data); setSession(response.data.session);
+              setConfirmationNotice(""); await loadSession(session.id);
             })}>暂不写入</button>
           </div>
         </> : interview.awaiting === "decision_retry" ? <>
@@ -347,7 +367,7 @@ export default function Home() {
               params: { path: { session_id: session.id } }, headers,
             });
             if (!response.data) throw new Error(errorMessage(response.error));
-            setInterview(response.data); setSession(response.data.session);
+            await loadSession(session.id);
           })}>重试当前决策</button></div>
         </> : interview.current_turn && interview.awaiting === "answer" ? <>
           <p className="lead">{interview.current_turn.question}</p>
@@ -361,12 +381,34 @@ export default function Home() {
               body: { turn_no: interview.current_turn!.turn_no, answer: answerText },
             });
             if (!response.data) throw new Error(errorMessage(response.error));
-            setAnswerText(""); setInterview(response.data); setSession(response.data.session);
+            setAnswerText(""); await loadSession(session.id);
           })}>{busy ? "处理中…" : "提交回答"}</button></div>
         </> : interview.session.status === "interviewing" ?
           <p className="muted">面试官正在处理当前回答。刷新后会从当前视图恢复。</p> :
-          <p className="muted">面试已结束。</p>}
+          <p className="muted">{interview.session.status === "post_processing" ? "面试已结束，赛后内容正在生成。" : "面试已结束。"}</p>}
+        {interview.session.status === "interviewing" && <div className="end-actions">
+          <button className="secondary" disabled={busy} onClick={() => void run(async () => {
+            const response = await api.POST("/v1/interviews/{session_id}/finish-early", {
+              params: { path: { session_id: session.id } }, headers,
+            });
+            if (!response.data) throw new Error(errorMessage(response.error));
+            await loadSession(session.id);
+          })}>提前完成</button>
+          {!confirmExit ? <button className="danger" disabled={busy} onClick={() => setConfirmExit(true)}>强制退出</button> :
+            <div className="exit-confirm" role="group" aria-label="确认强制退出">
+              <p>强制退出后不会继续生成赛后报告。确认退出吗？</p>
+              <button className="secondary" disabled={busy} onClick={() => setConfirmExit(false)}>取消</button>
+              <button className="danger" disabled={busy} onClick={() => void run(async () => {
+                const response = await api.POST("/v1/interviews/{session_id}/force-exit:confirm", {
+                  params: { path: { session_id: session.id } }, headers,
+                });
+                if (!response.data) throw new Error(errorMessage(response.error));
+                await loadSession(session.id);
+              })}>确认强制退出</button>
+            </div>}
+        </div>}
       </section>}
+      {result && <Results result={result} headers={headers} onRefresh={() => loadSession(session.id)} />}
     </>}
   </main>;
 }

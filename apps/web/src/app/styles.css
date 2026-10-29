@@ -21,6 +21,33 @@ textarea, select, .inline input { width: 100%; border: 1px solid #bfcac3; border
 textarea { resize: vertical; line-height: 1.55; }
 select { max-width: 360px; }
 .actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.secondary { background: white; color: #126b62; }
+.danger { background: #963c34; border-color: #963c34; }
+.end-actions, .export-actions, .tabs, .feedback-controls { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+.end-actions { border-top: 1px solid #e3e9e4; padding-top: 18px; }
+.exit-confirm { border: 1px solid #dfb0a8; background: #fff8f5; border-radius: 10px; padding: 14px; }
+.exit-confirm p { margin-top: 0; }
+.progress-list { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; }
+.progress-list li { border: 1px solid #dbe3dc; border-radius: 20px; padding: 6px 10px; color: #60716b; }
+.progress-list li.current { color: #126b62; border-color: #126b62; background: #e7f2ee; font-weight: 700; }
+.tabs { border-bottom: 1px solid #dbe3dc; padding-bottom: 12px; margin-bottom: 20px; }
+.tabs button.active { background: #126b62; color: white; }
+.qa-card { border: 1px solid #dbe3dc; border-radius: 12px; padding: 20px; margin: 16px 0; }
+.qa-card h4 { margin: 8px 0 18px; font-size: 19px; }
+.qa-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 22px; }
+.qa-fields p, .prose { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.qa-fields small { color: #60716b; }
+.feedback-controls select { width: auto; min-width: 180px; }
+.radar { width: min(100%, 330px); display: block; margin: 8px auto 20px; }
+.radar-grid { fill: none; stroke: #d4e2da; }
+.radar-axis { stroke: #d4e2da; }
+.radar-shape { fill: #27a39455; stroke: #126b62; stroke-width: 2; }
+.radar-empty { fill: white; stroke: #88958f; stroke-width: 2; }
+.radar-label { fill: #52635e; font-size: 11px; }
+.dimension-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dimension-list article { border: 1px solid #e3e9e4; border-radius: 10px; padding: 14px; }
+.dimension-list h4 { margin: 0; }
+.level { color: #126b62; font-size: 13px; font-weight: 600; margin-left: 8px; }
 .session-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 18px; }
 .session-item { display: flex; justify-content: space-between; gap: 8px; text-align: left; background: #f8faf8; color: #19322e; border-color: #dbe3dc; }
 .session-item.active { border-color: #126b62; background: #e7f2ee; }
@@ -44,4 +71,4 @@ legend { padding: 0 8px; font-weight: 600; }
 .stage-list li strong, .stage-list li span, .stage-list li small { display: block; margin-bottom: 5px; }
 .stage-list li small { color: #60716b; }
 footer { color: #697a72; font-size: 13px; padding: 24px 0; }
-@media (max-width: 640px) { .shell { padding: 30px 14px 48px; } .panel { padding: 18px; } .section-head, .inline { align-items: stretch; flex-direction: column; } }
+@media (max-width: 640px) { .shell { padding: 30px 14px 48px; } .panel { padding: 18px; } .section-head, .inline { align-items: stretch; flex-direction: column; } .qa-fields, .dimension-list { grid-template-columns: 1fr; } }
