@@ -3,7 +3,7 @@
 import asyncio
 import json
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langgraph.errors import NodeCancelledError
@@ -14,8 +14,23 @@ from test_gate5_basic import PostModel
 from app.db import engine
 from app.domain.contracts import ResultView, SupervisorDecision
 from app.services import finalization, interview_worker
-from app.services.interview_checkpoint import delete_checkpoint, read_finalization_checkpoint
+from app.services.interview_checkpoint import (
+    FINALIZATION_NAMESPACE,
+    checkpoint_saver,
+    delete_checkpoint,
+    graph_config,
+)
 from app.services.result_render import render_full_qa_markdown, render_report_markdown
+
+
+async def finalization_pending_nodes(session_id: UUID, model) -> tuple[str, ...]:
+    """Compile the production finalization graph read-only to inspect checkpoint position."""
+    graph = finalization._build_finalization_graph(session_id, model)
+    async with checkpoint_saver() as saver:
+        snapshot = await graph.compile(checkpointer=saver).aget_state(
+            graph_config(session_id, FINALIZATION_NAMESPACE)
+        )
+    return tuple(snapshot.next)
 
 
 async def completed_stage(harness: Harness) -> tuple:
@@ -799,7 +814,7 @@ async def test_partial_fanout_restart_reuses_published_sibling_results():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("lose_checkpoint", [False, True])
-async def test_finalization_redis_checkpoint_resumes_after_reference_barrier(
+async def test_finalization_checkpoint_resumes_after_reference_barrier(
     monkeypatch, lose_checkpoint
 ):
     model = CapturingPostModel()
@@ -815,7 +830,8 @@ async def test_finalization_redis_checkpoint_resumes_after_reference_barrier(
         monkeypatch.setattr(finalization, "_evaluation", paused_evaluation)
         running = asyncio.create_task(finalization.run_finalization(session_id, model))
         await asyncio.wait_for(entered.wait(), 10)
-        assert await read_finalization_checkpoint(session_id) == "references_done"
+        # The saver checkpoint crossed the reference barrier: only evaluations is pending.
+        assert await finalization_pending_nodes(session_id, model) == ("evaluations",)
         running.cancel()
         with pytest.raises((asyncio.CancelledError, NodeCancelledError)):
             await running
@@ -823,7 +839,7 @@ async def test_finalization_redis_checkpoint_resumes_after_reference_barrier(
         prior_inputs = len(model.inputs)
         if lose_checkpoint:
             await delete_checkpoint(session_id)
-            assert await read_finalization_checkpoint(session_id) is None
+            assert await finalization_pending_nodes(session_id, model) == ()
         else:
 
             async def references_must_be_skipped(*_args):
@@ -840,7 +856,7 @@ async def test_finalization_redis_checkpoint_resumes_after_reference_barrier(
         result = (await harness.client.get(f"{base}/full-qa", headers=HEADERS)).json()
         assert result["session"]["status"] == "completed"
         assert result["report"] is not None
-        assert await read_finalization_checkpoint(session_id) is None
+        assert await finalization_pending_nodes(session_id, model) == ()
 
 
 @pytest.mark.asyncio

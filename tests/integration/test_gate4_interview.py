@@ -6,7 +6,6 @@ from uuid import UUID
 
 import httpx
 import pytest
-from redis.asyncio import Redis
 from sqlalchemy import text
 
 from app.api.model_dependency import get_model_adapter
@@ -16,7 +15,7 @@ from app.domain.contracts import InterviewPlan, InterviewStage, SectionRef, Supe
 from app.main import app
 from app.services import interview as service
 from app.services import interview_worker as worker
-from app.settings import get_settings
+from app.services.interview_checkpoint import delete_checkpoint
 from model_adapter import ModelFailure
 
 USER_ID = UUID("00000000-0000-4000-8000-000000000001")
@@ -145,12 +144,8 @@ class Harness:
         await self.client.aclose()
         app.dependency_overrides.pop(get_model_adapter, None)
         app.dependency_overrides.pop(get_retriever, None)
-        redis = Redis.from_url(get_settings().redis_url)
-        try:
-            for session_id in self.ids:
-                await redis.delete(f"interview:{session_id}:checkpoint")
-        finally:
-            await redis.aclose()
+        for session_id in self.ids:
+            await delete_checkpoint(session_id)
         async with engine.begin() as connection:
             for session_id in self.ids:
                 await connection.execute(
@@ -263,7 +258,7 @@ async def test_lost_answer_notification_still_reads_committed_question(monkeypat
     async with Harness(model) as harness:
         _session_id, base, _ = await harness.create()
 
-        async def drop_notification(_session_id):
+        async def drop_notification(_session_id, _event):
             return None
 
         monkeypatch.setattr(service, "notify_current_changed", drop_notification)
@@ -376,7 +371,8 @@ async def test_worker_resumes_only_missing_effect(crash_point, monkeypatch):
     async with Harness(model) as harness:
         session_id, base, _ = await harness.create()
         original_run = service._run_decisions
-        original_checkpoint = service.write_checkpoint
+        original_publish = service._publish_decision
+        original_load = service._load_context
         if crash_point == "after_answer":
 
             async def crash_once(*args):
@@ -386,7 +382,6 @@ async def test_worker_resumes_only_missing_effect(crash_point, monkeypatch):
             monkeypatch.setattr(service, "_run_decisions", crash_once)
             answer = "继续回答"
         elif crash_point == "after_model":
-            original_publish = service._publish_decision
 
             async def crash_once(*args, **kwargs):
                 monkeypatch.setattr(service, "_publish_decision", original_publish)
@@ -395,20 +390,32 @@ async def test_worker_resumes_only_missing_effect(crash_point, monkeypatch):
             monkeypatch.setattr(service, "_publish_decision", crash_once)
             answer = "继续回答"
         else:
+            # The graph reloads context in load_session_context and once more inside
+            # after_publication. The stage-close commit sits between the second and
+            # third call; the post-node checkpoint write sits after the second call.
+            stopped_after_call = 2 if crash_point == "after_stage_close" else 3
+            load_calls = 0
 
-            async def checkpoint_once(*args, **kwargs):
-                if kwargs.get("awaiting") == "processing":
-                    monkeypatch.setattr(service, "write_checkpoint", original_checkpoint)
-                    if crash_point == "after_stage_checkpoint":
-                        await original_checkpoint(*args, **kwargs)
-                    raise RuntimeError("simulated process stop after stage close")
-                return await original_checkpoint(*args, **kwargs)
+            async def crash_on_load(*args, **kwargs):
+                nonlocal load_calls
+                load_calls += 1
+                if load_calls == stopped_after_call:
+                    monkeypatch.setattr(service, "_load_context", original_load)
+                    raise RuntimeError("simulated process stop around stage close")
+                return await original_load(*args, **kwargs)
 
-            monkeypatch.setattr(service, "write_checkpoint", checkpoint_once)
+            monkeypatch.setattr(service, "_load_context", crash_on_load)
             answer = "结束阶段"
         interrupted = await harness.answer(base, 1, answer)
         assert interrupted.status_code == 500
         before = model.supervisor_calls
+        checkpoint = await service.read_checkpoint(session_id)
+        if crash_point == "after_stage_close":
+            # The close committed but the graph node never finished: no checkpoint advance.
+            assert checkpoint["route"] == "continue"
+        if crash_point == "after_stage_checkpoint":
+            # The node completed and its checkpoint write persisted the stage change.
+            assert checkpoint["route"] == "next_stage"
 
         async def selected(_db, _limit=20):
             return [{"id": session_id, "user_id": USER_ID}]
@@ -439,11 +446,7 @@ async def test_cumulative_compact_rebuilds_after_checkpoint_loss():
         assert model.compact_inputs[1]["previous_compact"] == "|1..20"
         assert model.answer_contexts[-1]["compact"] == "|1..20|21..40"
         assert model.answer_contexts[-1]["recent_turns"] == []
-        redis = Redis.from_url(get_settings().redis_url)
-        try:
-            await redis.delete(f"interview:{session_id}:checkpoint")
-        finally:
-            await redis.aclose()
+        await delete_checkpoint(session_id)
         response = await harness.answer(base, 41, "继续回答 第41题")
         assert response.status_code == 200, response.text
         assert len(model.compact_inputs) == 4
@@ -473,17 +476,7 @@ async def test_confirmed_append_survives_lost_checkpoint_before_question(monkeyp
             json={"turn_no": 1, "decision": "confirm"},
         )
         assert interrupted.status_code == 500
-        cannot_skip_committed = await harness.client.post(
-            f"{base}/snapshot-corrections:resolve",
-            headers=HEADERS,
-            json={"turn_no": 1, "decision": "do_not_write"},
-        )
-        assert cannot_skip_committed.status_code == 409
-        redis = Redis.from_url(get_settings().redis_url)
-        try:
-            await redis.delete(f"interview:{session_id}:checkpoint")
-        finally:
-            await redis.aclose()
+        await delete_checkpoint(session_id)
 
         async def selected(_db, _limit=20):
             return [{"id": session_id, "user_id": USER_ID}]

@@ -449,8 +449,8 @@ async def _report(session_id: UUID, model: ModelAdapter) -> str:
     return await _run_task(session_id, "report", None, work, publish)
 
 
-async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
-    """Start or resume the checkpointer-backed finalization graph."""
+def _build_finalization_graph(session_id: UUID, model: ModelAdapter) -> StateGraph:
+    """Assemble the dependency graph; recovery tests compile it read-only to inspect position."""
 
     async def load(_state: FinalizationState) -> FinalizationState:
         async with session_factory() as db, db.begin():
@@ -547,6 +547,12 @@ async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
         "report", lambda state: state["route"], {"complete": "complete", "stop": END}
     )
     graph.add_edge("complete", END)
+    return graph
+
+
+async def run_finalization(session_id: UUID, model: ModelAdapter) -> None:
+    """Start or resume the checkpointer-backed finalization graph."""
+    graph = _build_finalization_graph(session_id, model)
     config = graph_config(session_id, FINALIZATION_NAMESPACE)
     async with checkpoint_saver() as saver:
         compiled = graph.compile(checkpointer=saver)

@@ -34,6 +34,7 @@
 - Web 和两个 Runtime 均可启动且健康检查通过。Codex 内置浏览器会拦截跨端口的本机 8100 请求，故本轮未把新目录选择页面记为手工通过。
 - 2026-10-28 Gate 5 独立代码审查（未运行新测试）：对照 `PRODUCT_DEVELOPMENT.md` 与 `IMPLEMENTATION_DESIGN.md` 复核终止、结算、赛后依赖链、降级规则与结果投影的代码及测试映射。结论：符合上游合同，FW-POST-01～08 均有对应自动化用例，未发现第二业务事实或过度设计；第 5、6、7 条记录的偏离经复核维持原评估。新发现两项待办与一项轻微重复，见“接下来的施工依赖”第 8～10 条。
 - 2026-10-28 Gate 6 施工：补齐用户 Web 的结果、反馈、导出与结束交互；Interview/Finalization Graph 改用 LangGraph Redis checkpointer，Compose 指向本机已有 `redis/redis-stack-server:7.4.0-v8` 并按镜像默认入口加载模块。Gate 3 首题/重试 4 passed，Gate 4 非旧 checkpoint 注入用例 7 passed；Web 类型检查和构建通过。旧测试中的手写 Redis key/阶段游标故障注入尚需按新 saver seam 改写，完整恢复与浏览器固定旅程由独立实例回归。
+- 2026-10-28 checkpointer 迁移测试收尾：Gate 3 起全部衍生测试改写至 saver seam。旧 `interview:{id}:checkpoint` 键的清理与"checkpoint 丢失"注入改用 `adelete_thread` 双线程删除；Gate 4 崩溃窗口改在图节点边界注入（`_load_context` 第二/三次调用分别对应 Stage 关闭事务提交后与该节点 checkpoint 写入后）；Gate 5 阶段游标断言改为用生产建图工厂编译只读图读取 `aget_state` 待执行节点（为此把 finalization 建图抽为 `_build_finalization_graph`，行为不变）。修复 `notify_current_changed` 增加 event 参数后两处测试 patch 签名过期（此前 TypeError 被通知循环吞掉）。实证并锁定 saver 记录式 resume 语义：确认卡 confirm 崩溃后重放改判 `do_not_write` 不能撤销已提交追加，节点按已记录意图续跑并发布原决策，且不新增 Supervisor 调用；不变量（追加恰好一次、发布恰好一次）由新增用例锁定。新增 `test_checkpoint_recovery.py` 7 例：三个中断点跨 saver 实例销毁重建的持久化与恢复且恢复后与 PG 事实一致、恢复重扫幂等、终态后 interview/finalization 双线程清理可幂等重放。非空转验证：saver 每实例随机前缀注入下 6/7 变红、单线程删除注入下清理用例变红，撤除注入后全绿。全量 Python 回归 103 passed、12 skipped（基线 96 + 新增 7）；Ruff、格式与 `git diff --check` 通过。跳过项仍为环境门控的真实模型/跨进程用例。
 
 ## 接下来的施工依赖
 

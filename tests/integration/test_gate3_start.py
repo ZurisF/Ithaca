@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from redis.asyncio import Redis
 from sqlalchemy import text
 
 from app.api.model_dependency import get_model_adapter
@@ -19,7 +18,7 @@ from app.domain.contracts import (
 )
 from app.main import app
 from app.services import interview as interview_service
-from app.settings import get_settings
+from app.services.interview_checkpoint import delete_checkpoint
 from model_adapter import ModelFailure
 
 USER_ID = "00000000-0000-4000-8000-000000000001"
@@ -102,12 +101,11 @@ async def test_first_question_publication_and_replay(
     app.dependency_overrides[get_model_adapter] = lambda: model
     app.dependency_overrides[get_retriever] = lambda: retriever
     session_id = None
-    notifications = 0
+    notifications: list[str] = []
     headers = {"X-Dev-User": USER_ID}
 
-    async def dropped_notification(_session_id) -> None:
-        nonlocal notifications
-        notifications += 1
+    async def dropped_notification(_session_id, event: str) -> None:
+        notifications.append(event)
         async with engine.connect() as connection:
             published = await connection.scalar(
                 text("""
@@ -163,7 +161,7 @@ async def test_first_question_publication_and_replay(
             assert replay.status_code == 200, replay.text
             assert replay.json()["current_turn"]["question"] == actual
             assert model.supervisor_calls == 1
-            assert notifications == 1
+            assert notifications == ["question_ready"]
             # The current view is authoritative even when the SSE notification was never received.
             reread = await client.get(f"{base}/current", headers=headers)
             assert reread.status_code == 200
@@ -180,11 +178,7 @@ async def test_first_question_publication_and_replay(
         app.dependency_overrides.pop(get_model_adapter, None)
         app.dependency_overrides.pop(get_retriever, None)
         if session_id:
-            redis = Redis.from_url(get_settings().redis_url)
-            try:
-                await redis.delete(f"interview:{session_id}:checkpoint")
-            finally:
-                await redis.aclose()
+            await delete_checkpoint(UUID(session_id))
         async with engine.begin() as connection:
             if session_id:
                 await connection.execute(
@@ -245,11 +239,7 @@ async def test_supervisor_failure_requires_explicit_retry() -> None:
         app.dependency_overrides.pop(get_model_adapter, None)
         app.dependency_overrides.pop(get_retriever, None)
         if session_id:
-            redis = Redis.from_url(get_settings().redis_url)
-            try:
-                await redis.delete(f"interview:{session_id}:checkpoint")
-            finally:
-                await redis.aclose()
+            await delete_checkpoint(UUID(session_id))
             async with engine.begin() as connection:
                 await connection.execute(
                     text("DELETE FROM app.interview_sessions WHERE id = :id"), {"id": session_id}

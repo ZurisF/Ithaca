@@ -1,10 +1,10 @@
 """Opt-in real Supervisor replay across follow-up and Stage transition."""
 
 import os
+from uuid import UUID
 
 import httpx
 import pytest
-from redis.asyncio import Redis
 from sqlalchemy import text
 
 from app.api.model_dependency import get_model_adapter
@@ -12,7 +12,7 @@ from app.bank.retrieval import get_retriever
 from app.db import engine
 from app.domain.contracts import InterviewPlan, InterviewStage, SectionRef
 from app.main import app
-from app.settings import get_settings
+from app.services.interview_checkpoint import delete_checkpoint
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LIVE_GATE4") != "1", reason="opt-in real Supervisor replay"
@@ -121,11 +121,7 @@ async def test_live_supervisor_continues_then_closes_stage():
             app.dependency_overrides.pop(get_model_adapter, None)
             app.dependency_overrides.pop(get_retriever, None)
             if session_id:
-                redis = Redis.from_url(get_settings().redis_url)
-                try:
-                    await redis.delete(f"interview:{session_id}:checkpoint")
-                finally:
-                    await redis.aclose()
+                await delete_checkpoint(UUID(session_id))
                 async with engine.begin() as connection:
                     await connection.execute(
                         text("DELETE FROM app.interview_sessions WHERE id = :id"),
