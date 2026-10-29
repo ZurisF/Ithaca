@@ -1,8 +1,11 @@
+from functools import lru_cache
+
 from app.observability.trace import PostgresTraceSink
 from app.settings import get_settings
 from model_adapter import ModelAdapter, OpenAICompatibleAdapter
 
 
+@lru_cache(maxsize=1)
 def get_model_adapter() -> ModelAdapter:
     settings = get_settings()
     return OpenAICompatibleAdapter(

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import Header
@@ -6,14 +5,8 @@ from sqlalchemy import text
 
 from app.api.errors import AppError
 from app.db import session_factory
+from app.domain.access import Identity
 from app.settings import get_settings
-
-
-@dataclass(frozen=True)
-class Identity:
-    id: UUID
-    role: str
-    display_name: str | None
 
 
 async def get_identity(

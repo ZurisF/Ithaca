@@ -6,12 +6,12 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.errors import AppError
-from app.api.identity import Identity
+from app.domain.access import Identity
 from app.domain.contracts import InterviewPlan, SectionRef
 from app.domain.rules import parse_sections, validate_plan
 from app.repositories import prepare as repo
-from app.services.prepare import _owned_session, _require_preparing
+from app.services.errors import AppError
+from app.services.session_access import owned_session, require_preparing
 from app.settings import get_settings
 from model_adapter import Message, ModelAdapter, ModelFailure, RetryPolicy
 
@@ -36,7 +36,7 @@ def _validate_versions(plan: InterviewPlan, direction: str, manifest: dict) -> l
 
 
 async def get_plan(db: AsyncSession, identity: Identity, session_id: UUID) -> InterviewPlan:
-    await _owned_session(db, session_id, identity, lock=False)
+    await owned_session(db, session_id, identity, lock=False)
     stored = await repo.get_plan(db, session_id)
     if stored is None:
         raise AppError(404, "plan_not_found", "当前会话还没有面试计划。")
@@ -52,8 +52,8 @@ async def generate_plan(
     prompt = PROMPT.read_text(encoding="utf-8")
 
     async with db.begin():
-        row = await _owned_session(db, session_id, identity, lock=False)
-        _require_preparing(row)
+        row = await owned_session(db, session_id, identity, lock=False)
+        require_preparing(row)
         existing = await repo.get_plan(db, session_id)
         if existing is not None:
             return InterviewPlan.model_validate(existing)
@@ -119,8 +119,8 @@ async def generate_plan(
     if validate(plan):
         raise AppError(422, "plan_invalid", "模型未生成有效的面试计划。")
     async with db.begin():
-        current = await _owned_session(db, session_id, identity, lock=True)
-        _require_preparing(current)
+        current = await owned_session(db, session_id, identity, lock=True)
+        require_preparing(current)
         existing = await repo.get_plan(db, session_id)
         if existing is not None:
             return InterviewPlan.model_validate(existing)

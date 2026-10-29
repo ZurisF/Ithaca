@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from content_safety import ContentRejected, filter_text
+from content_safety import ContentRejected, filter_text, snapshot_headings, visible_snapshot_lines
 from local_project.errors import LocalError
 from local_project.inventory.repository_map import build_repository_map
 from local_project.inventory.walk import inventory
@@ -57,40 +57,30 @@ def _validate_snapshot(
         return ["snapshot content is empty, unsafe or over budget"]
     current_kind = None
     sections: list[tuple[str, str, str]] = []
-    lines = markdown.splitlines()
-    start = None
+    lines = visible_snapshot_lines(markdown)
     seen = set()
     headings = set()
-    for index, line in enumerate(lines):
-        if line.startswith("## "):
-            if start is not None:
-                kind, title, _ = sections[-1]
-                sections[-1] = (kind, title, "\n".join(lines[start:index]))
-                start = None
-            heading = line[3:].strip()
-            if heading in {"Modules", "Threads"}:
-                headings.add(heading)
-            current_kind = {"Modules": "module", "Threads": "thread"}.get(heading)
-        elif line.startswith("### ") and current_kind:
-            if start is not None:
-                kind, title, _ = sections[-1]
-                sections[-1] = (kind, title, "\n".join(lines[start:index]))
-            title = line[4:].strip()
+    structure = snapshot_headings(markdown)
+    for index, heading in enumerate(structure):
+        if heading.level == 2:
+            if heading.title in {"Modules", "Threads"}:
+                headings.add(heading.title)
+            current_kind = {"Modules": "module", "Threads": "thread"}.get(heading.title)
+        elif current_kind:
+            title = heading.title
             key = (current_kind, title)
             if not title or key in seen:
                 errors.append("empty or duplicate Module/Thread heading")
             seen.add(key)
-            sections.append((current_kind, title, ""))
-            start = index + 1
-    if start is not None:
-        kind, title, _ = sections[-1]
-        sections[-1] = (kind, title, "\n".join(lines[start:]))
+            end = structure[index + 1].line_index if index + 1 < len(structure) else len(lines)
+            sections.append((current_kind, title, "\n".join(lines[heading.line_index + 1 : end])))
     if headings != {"Modules", "Threads"}:
         errors.append("snapshot needs both Modules and Threads headings")
     if not sections:
         errors.append("snapshot needs at least one evidence-backed Module or Thread")
-    citations = list(CITATION.finditer(markdown))
-    if re.search(r":L\d+", CITATION.sub("", markdown)):
+    visible = "\n".join(lines)
+    citations = list(CITATION.finditer(visible))
+    if re.search(r":L\d+", CITATION.sub("", visible)):
         errors.append("file and line citations must be wrapped in backticks")
     for match in citations:
         path = match.group(1)

@@ -15,7 +15,8 @@
 ## 最近验证
 
 - `ruff check .`、`ruff format --check services packages tests scripts`、`git diff --check` 通过。
-- `pytest -q --tb=short`：50 passed，5 skipped；一次性测试库迁移往返另行通过。跳过项是需显式开启的真实模型或跨进程测试。
+- `pytest -q --tb=line`：53 passed，5 skipped；一次性测试库迁移往返另行通过。跳过项是需显式开启的真实模型或跨进程测试。
+- Gate 0～2 边界修复回归：目录切换后的迟到观察不能覆盖当前快照；Observer 与 Application 共用代码块感知的 Markdown 标题扫描；模型适配器在各 Runtime 内共享并发上限。OpenAPI 输出未变化。
 - OpenAPI 与 Web TypeScript 客户端已重新生成；`npm run build --prefix apps/web` 通过。
 - 新模型渠道沿本机代理调用：真实 Planner 1 passed，真实 Observer 1 passed，双 Runtime 的 handle 隔离和真实观察 2 passed。新增 `max_completion_tokens` 参数已在真实 Observer 调用中通过。
 - 题库导入首次写入 537 条，第二次写入 0 条；再运行索引完整性检查为 537/537。受控入库测试验证已存在行不会被覆盖。

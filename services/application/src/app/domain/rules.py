@@ -1,12 +1,10 @@
 """Deterministic rules shared by command paths and tests."""
 
-import re
 from collections.abc import Iterable
 from uuid import UUID
 
 from app.domain.contracts import InterviewPlan, SectionRef
-
-HEADING = re.compile(r"^(#{2,3})[ \t]+(.+?)[ \t]*#*[ \t]*$")
+from content_safety import snapshot_headings
 
 
 def parse_sections(markdown: str) -> list[SectionRef]:
@@ -14,19 +12,9 @@ def parse_sections(markdown: str) -> list[SectionRef]:
     current_kind: str | None = None
     found: list[SectionRef] = []
     seen: set[tuple[str, str]] = set()
-    in_fence = False
-    for line in markdown.splitlines():
-        if line.lstrip().startswith("```") or line.lstrip().startswith("~~~"):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        match = HEADING.fullmatch(line)
-        if not match:
-            continue
-        level, title = match.groups()
-        title = title.strip()
-        if level == "##":
+    for heading in snapshot_headings(markdown):
+        title = heading.title
+        if heading.level == 2:
             current_kind = {"Modules": "module", "Threads": "thread"}.get(title)
         elif current_kind and title:
             key = (current_kind, title)

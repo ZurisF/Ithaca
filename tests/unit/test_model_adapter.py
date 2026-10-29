@@ -4,6 +4,8 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
+from app.api.model_dependency import get_model_adapter
+from local_project.api.sources import get_observer_model
 from model_adapter import Message, ModelFailure, OpenAICompatibleAdapter, RetryPolicy
 
 
@@ -17,6 +19,11 @@ class CaptureTrace:
 
     async def write(self, span) -> None:
         self.spans.append(span)
+
+
+def test_runtime_model_factories_share_their_concurrency_limit() -> None:
+    assert get_model_adapter() is get_model_adapter()
+    assert get_observer_model() is get_observer_model()
 
 
 @pytest.mark.asyncio

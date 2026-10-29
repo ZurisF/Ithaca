@@ -9,8 +9,7 @@ import httpx
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.errors import AppError
-from app.api.identity import Identity
+from app.domain.access import Identity
 from app.domain.contracts import (
     Direction,
     SectionRef,
@@ -21,30 +20,14 @@ from app.domain.contracts import (
 )
 from app.domain.rules import parse_sections
 from app.repositories import prepare as repo
+from app.services.errors import AppError
+from app.services.session_access import owned_session, require_preparing, require_user
 from app.settings import get_settings
 from content_safety import ContentRejected, filter_text
 
 
-def _require_user(identity: Identity) -> None:
-    if identity.role != "user":
-        raise AppError(403, "forbidden", "只有 User 可以创建和管理面试会话。")
-
-
 def _session_view(row) -> SessionView:
     return SessionView.model_validate(dict(row))
-
-
-def _require_preparing(row) -> None:
-    if row["status"] != "preparing":
-        raise AppError(409, "state_conflict", "当前会话已离开准备阶段。")
-
-
-async def _owned_session(db: AsyncSession, session_id: UUID, identity: Identity, *, lock: bool):
-    _require_user(identity)
-    row = await repo.get_session(db, session_id, identity.id, lock=lock)
-    if row is None:
-        raise AppError(404, "session_not_found", "找不到这场面试。")
-    return row
 
 
 def _safe_text(raw: str, *, max_chars: int) -> str:
@@ -55,7 +38,7 @@ def _safe_text(raw: str, *, max_chars: int) -> str:
 
 
 async def create(db: AsyncSession, identity: Identity) -> SessionView:
-    _require_user(identity)
+    require_user(identity)
     session_id = uuid4()
     async with db.begin():
         await repo.create_session(db, session_id, identity.id)
@@ -64,14 +47,14 @@ async def create(db: AsyncSession, identity: Identity) -> SessionView:
 
 
 async def get(db: AsyncSession, identity: Identity, session_id: UUID) -> SessionView:
-    row = await _owned_session(db, session_id, identity, lock=False)
+    row = await owned_session(db, session_id, identity, lock=False)
     return _session_view(row)
 
 
 async def list_for_user(
     db: AsyncSession, identity: Identity, *, limit: int, offset: int
 ) -> list[SessionSummary]:
-    _require_user(identity)
+    require_user(identity)
     rows = await repo.list_sessions(db, identity.id, limit, offset)
     return [SessionSummary.model_validate(dict(row)) for row in rows]
 
@@ -80,14 +63,14 @@ async def import_markdown(
     db: AsyncSession, identity: Identity, session_id: UUID, markdown: str, source_handle: str | None
 ) -> SnapshotView:
     async with db.begin():
-        initial = await _owned_session(db, session_id, identity, lock=False)
-        _require_preparing(initial)
+        initial = await owned_session(db, session_id, identity, lock=False)
+        require_preparing(initial)
     content = _safe_text(markdown, max_chars=200_000)
     if source_handle is not None:
         await _verify_source_handle(session_id, source_handle)
     async with db.begin():
-        row = await _owned_session(db, session_id, identity, lock=True)
-        _require_preparing(row)
+        row = await owned_session(db, session_id, identity, lock=True)
+        require_preparing(row)
         old_content = await repo.get_snapshot(db, session_id)
         if old_content != content:
             await repo.replace_snapshot(db, session_id, content)
@@ -120,8 +103,8 @@ async def _verify_source_handle(session_id: UUID, source_handle: str) -> None:
 
 async def choose_source(db: AsyncSession, identity: Identity, session_id: UUID) -> SourceInventory:
     async with db.begin():
-        row = await _owned_session(db, session_id, identity, lock=False)
-        _require_preparing(row)
+        row = await owned_session(db, session_id, identity, lock=False)
+        require_preparing(row)
     settings = get_settings()
     if not settings.desktop_instance_token:
         raise AppError(503, "dependency_unavailable", "本地目录服务尚未配置。")
@@ -145,8 +128,8 @@ async def choose_source(db: AsyncSession, identity: Identity, session_id: UUID) 
         raise AppError(503, "source_picker_failed", "目录选择返回无效。") from exc
     try:
         async with db.begin():
-            row = await _owned_session(db, session_id, identity, lock=True)
-            _require_preparing(row)
+            row = await owned_session(db, session_id, identity, lock=True)
+            require_preparing(row)
             previous = row["source_handle"]
             await repo.set_source_handle(db, session_id, chosen.source_handle)
     except Exception:
@@ -173,7 +156,7 @@ async def _release_source(session_id: UUID, handle: str) -> None:
 async def source_inventory(
     db: AsyncSession, identity: Identity, session_id: UUID
 ) -> SourceInventory:
-    row = await _owned_session(db, session_id, identity, lock=False)
+    row = await owned_session(db, session_id, identity, lock=False)
     handle = row["source_handle"]
     if not handle:
         raise AppError(409, "source_not_selected", "请先选择项目目录。")
@@ -203,8 +186,10 @@ async def observe_source(
     if re.fullmatch(r"[A-Za-z0-9_-]{43}", source_handle) is None:
         raise AppError(400, "invalid_request", "目录授权标识无效。")
     async with db.begin():
-        row = await _owned_session(db, session_id, identity, lock=False)
-        _require_preparing(row)
+        row = await owned_session(db, session_id, identity, lock=False)
+        require_preparing(row)
+        if row["source_handle"] != source_handle:
+            raise AppError(409, "state_conflict", "目录授权已变化，请重新选择当前目录。")
     settings = get_settings()
     if not settings.desktop_instance_token:
         raise AppError(503, "dependency_unavailable", "本地目录服务尚未配置。")
@@ -238,11 +223,21 @@ async def observe_source(
         payload.get("snapshot"), str
     ):
         raise AppError(503, "observer_failed", "目录观察返回无效。")
-    return await import_markdown(db, identity, session_id, payload["snapshot"], source_handle)
+    content = _safe_text(payload["snapshot"], max_chars=200_000)
+    async with db.begin():
+        row = await owned_session(db, session_id, identity, lock=True)
+        require_preparing(row)
+        if row["source_handle"] != source_handle:
+            raise AppError(409, "state_conflict", "目录授权已变化，请重新观察当前目录。")
+        old_content = await repo.get_snapshot(db, session_id)
+        if old_content != content:
+            await repo.replace_snapshot(db, session_id, content)
+            await repo.clear_selection_and_plan(db, session_id)
+    return SnapshotView(session_id=session_id, content=content, sections=parse_sections(content))
 
 
 async def parse_ranges(db: AsyncSession, identity: Identity, session_id: UUID) -> SnapshotView:
-    await _owned_session(db, session_id, identity, lock=False)
+    await owned_session(db, session_id, identity, lock=False)
     content = await repo.get_snapshot(db, session_id)
     if content is None:
         raise AppError(409, "state_conflict", "请先导入或生成项目快照。")
@@ -258,8 +253,8 @@ async def select(
     confirm_empty_range: bool,
 ) -> SessionView:
     async with db.begin():
-        row = await _owned_session(db, session_id, identity, lock=True)
-        _require_preparing(row)
+        row = await owned_session(db, session_id, identity, lock=True)
+        require_preparing(row)
         content = await repo.get_snapshot(db, session_id)
         if content is None:
             raise AppError(409, "state_conflict", "请先导入或生成项目快照。")
@@ -303,8 +298,8 @@ async def append_user_opinion(
     payload_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     operation_key = f"session:{session_id}:snapshot:user_opinion:{request_id}"
     async with db.begin():
-        row = await _owned_session(db, session_id, identity, lock=True)
-        _require_preparing(row)
+        row = await owned_session(db, session_id, identity, lock=True)
+        require_preparing(row)
         content = await repo.get_snapshot(db, session_id)
         if content is None:
             raise AppError(409, "state_conflict", "请先导入或生成项目快照。")

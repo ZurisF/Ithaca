@@ -103,47 +103,6 @@ class SupervisorDecision(StrictModel):
             )
 
 
-class ProjectAnswerItem(StrictModel):
-    turn_no: int = Field(ge=1, le=100)
-    answer: str = Field(min_length=1)
-
-
-class ProjectAnswersOutput(StrictModel):
-    answers: list[ProjectAnswerItem]
-    post_verification: str | None = None
-
-
-class IdealAnswerOutput(StrictModel):
-    answer: str = Field(min_length=1)
-
-
-class EvaluationOutput(StrictModel):
-    comment: str = Field(min_length=1)
-
-
-class DimensionAssessment(StrictModel):
-    score: int = Field(ge=0, le=5)
-    analysis: str
-
-
-class ReportDimensions(StrictModel):
-    requirements_understanding: DimensionAssessment
-    system_design: DimensionAssessment
-    technical_depth: DimensionAssessment
-    engineering_quality: DimensionAssessment
-    failure_thinking: DimensionAssessment
-    data_awareness: DimensionAssessment
-    communication_structure: DimensionAssessment
-    retrospection: DimensionAssessment
-
-
-class ReportOutput(StrictModel):
-    overall: str
-    dimensions: ReportDimensions
-    project_recommendations: str
-    training_recommendations: str
-
-
 class SessionSummary(StrictModel):
     id: UUID
     status: SessionStatus
@@ -212,16 +171,3 @@ class InterviewView(StrictModel):
     awaiting: Literal["answer", "snapshot_confirmation", "decision_retry"] | None
     pending_correction: str | None
     last_error_code: str | None
-
-
-class FullQaTurnView(TurnView):
-    project_answer: str | None
-    ideal_answer: str | None
-    comment: str | None
-
-
-class ResultView(StrictModel):
-    session: SessionView
-    turns: list[FullQaTurnView]
-    report: ReportOutput | None
-    processing_incomplete: bool

@@ -6,10 +6,25 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.contracts import SectionRef
+from app.domain.rules import parse_sections
 from local_project.errors import LocalError
 from local_project.observer import run as observer_run
 from local_project.observer.run import ObserverStep, observe
 from local_project.settings import get_settings
+
+
+def test_observer_and_application_ignore_fenced_scope_headings() -> None:
+    markdown = (
+        "## Modules\n```md\n### Fake\n`missing.py:L99`\n```\n"
+        "### API\nVerified by `main.py:L1`.\n"
+        "## Threads\n### Request Flow\nVerified by `main.py:L1`.\n"
+    )
+    assert observer_run._validate_snapshot(markdown, {"main.py": {1}}, partial=False) == []
+    assert parse_sections(markdown) == [
+        SectionRef(kind="module", title="API"),
+        SectionRef(kind="thread", title="Request Flow"),
+    ]
 
 
 class ControlledObserver:

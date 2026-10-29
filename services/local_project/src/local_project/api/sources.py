@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from functools import lru_cache
 from typing import Annotated
 from uuid import UUID
 
@@ -32,6 +33,7 @@ class ChooseRequest(BaseModel):
     session_id: UUID
 
 
+@lru_cache(maxsize=1)
 def get_observer_model() -> ModelAdapter:
     settings = get_settings()
     return OpenAICompatibleAdapter(
@@ -40,6 +42,7 @@ def get_observer_model() -> ModelAdapter:
         model=settings.model_name,
         provider=settings.model_provider,
         trace_sink=trace_sink,
+        max_concurrency=settings.model_max_concurrency,
     )
 
 
