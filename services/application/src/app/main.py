@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 from typing import Annotated
 from urllib.parse import urlparse
 
@@ -17,11 +19,23 @@ from app.api.prepare import router as prepare_router
 from app.db import engine
 from app.domain.contracts import ModelReadiness
 from app.observability.logging import configure_logging
+from app.services.interview_worker import run_worker, stop_worker
 from app.settings import get_settings
 
 configure_logging()
 settings = get_settings()
-app = FastAPI(title="Project Interview Lab Application", version="0.1.0")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    worker = asyncio.create_task(run_worker())
+    try:
+        yield
+    finally:
+        await stop_worker(worker)
+
+
+app = FastAPI(title="Project Interview Lab Application", version="0.1.0", lifespan=lifespan)
 app.add_exception_handler(AppError, app_error_handler)
 
 

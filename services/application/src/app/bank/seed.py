@@ -1,7 +1,6 @@
 """Import only the reviewed topic files into the single PostgreSQL question bank."""
 
 import json
-import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +10,7 @@ from uuid import uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.bank.vectors import checked_vector
 from app.db import engine
 
 ROOT = Path(__file__).resolve().parents[5]
@@ -94,8 +94,6 @@ def load_seed_batch(source: Path = SOURCE) -> SeedBatch:
             if question not in seen:
                 seen.add(question)
                 questions.append(SeedQuestion(question, file_topics[name]))
-    if source_total != expected_total:
-        raise ValueError("seed total differs from README")
     return SeedBatch(tuple(questions), source_total, source_total - len(questions))
 
 
@@ -109,13 +107,6 @@ def lexical_terms(question: str) -> str:
         for term in re.findall(r"[A-Za-z][A-Za-z0-9_+#.\-]*|\d+|[\u4e00-\u9fff]+", chunk)
     ]
     return " ".join(words)
-
-
-def _checked_vector(raw: object) -> str:
-    values = [float(value) for value in raw]  # type: ignore[arg-type]
-    if len(values) != 1024 or not all(math.isfinite(value) for value in values):
-        raise ValueError("BGE-M3 must return a finite 1024-dimensional dense vector")
-    return json.dumps(values, separators=(",", ":"))
 
 
 async def import_seed_batch(
@@ -136,7 +127,7 @@ async def import_seed_batch(
         encoded = embedder.encode_corpus([item.question for item in missing])
         if len(encoded) != len(missing):
             raise ValueError("BGE-M3 returned a different number of vectors")
-        vectors = [_checked_vector(vector) for vector in encoded]
+        vectors = [checked_vector(vector) for vector in encoded]
     else:
         vectors = []
 

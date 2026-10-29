@@ -168,6 +168,7 @@ class InterviewView(StrictModel):
     plan: InterviewPlan | None
     current_stage_index: int | None
     current_turn: TurnView | None
+    previous_turn: TurnView | None = None
     awaiting: Literal["answer", "snapshot_confirmation", "decision_retry"] | None
     pending_correction: str | None
     last_error_code: str | None

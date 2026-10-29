@@ -1015,6 +1015,144 @@
         }
       }
     },
+    "/v1/interviews/{session_id}/answers": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Answer",
+        "operationId": "answer_v1_interviews__session_id__answers_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interviews/{session_id}/snapshot-corrections:resolve": {
+      "post": {
+        "tags": [
+          "interviews"
+        ],
+        "summary": "Resolve Correction",
+        "operationId": "resolve_correction_v1_interviews__session_id__snapshot_corrections_resolve_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "x-dev-user",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/interviews/{session_id}/events": {
       "get": {
         "tags": [
@@ -1249,6 +1387,65 @@
   },
   "components": {
     "schemas": {
+      "AnswerRequest": {
+        "properties": {
+          "turn_no": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Turn No"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_no",
+          "answer"
+        ],
+        "title": "AnswerRequest"
+      },
+      "CorrectionRequest": {
+        "properties": {
+          "turn_no": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Turn No"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "confirm",
+              "do_not_write"
+            ],
+            "title": "Decision"
+          },
+          "edited_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_no",
+          "decision"
+        ],
+        "title": "CorrectionRequest"
+      },
       "Direction": {
         "type": "string",
         "enum": [
@@ -1424,6 +1621,16 @@
             "title": "Current Stage Index"
           },
           "current_turn": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous_turn": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TurnView"

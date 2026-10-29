@@ -74,6 +74,17 @@ def test_supervisor_action_and_stage_entry_are_strict() -> None:
         ).validate_stage_entry()
 
 
+def test_supervisor_punctuation_does_not_define_question_count() -> None:
+    decision = SupervisorDecision(
+        user_acts=[{"type": "ask_interviewer", "question_kind": "clarification"}],
+        interviewer_message="你是想问评分口径吗？",
+        plan_action="continue",
+        question="你当时考虑过用 Redis 吗？为什么最终没选？",
+    )
+    assert decision.question is not None
+    assert decision.interviewer_message is not None
+
+
 def test_question_bank_link_requires_exact_text() -> None:
     question_id = uuid4()
     question = "为什么选 pgvector？"

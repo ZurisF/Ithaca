@@ -83,6 +83,6 @@ uv run alembic -c services/application/alembic.ini upgrade head
 
 ## 施工进度
 
-具体完成项、验证记录和剩余范围见 [CONSTRUCTION_STATUS.md](CONSTRUCTION_STATUS.md)。Gate 1 已通过本机验收。Gate 2 的准备流程代码、真实模型和双 Runtime 链路已通过合成材料验证；原生目录选择器的手工核验依用户要求后补。Gate 3 的题库种子导入、在线检索和首题发布已接入；回答、阶段推进、赛后、策展、删除和完整故障回归仍待施工。
+具体完成项、验证记录和剩余范围见 [CONSTRUCTION_STATUS.md](CONSTRUCTION_STATUS.md)。Gate 1 已通过本机验收。Gate 2 的准备流程代码、真实模型和双 Runtime 链路已通过合成材料验证；原生目录选择器的手工核验依用户要求后补。Gate 3 的题库种子导入、在线检索和首题发布已接入。Gate 4 的实时回答、Stage 推进、确认卡、决策重试、compact 和面试欠决策恢复已接入并通过主要验收；赛后 worker 分支、结算、策展、删除和完整故障回归继续施工。
 
 进度按实际通过的验收门更新，不以启动成功或页面存在代替业务完成。产品行为以 `PRODUCT_DEVELOPMENT.md`、`IMPLEMENTATION_DESIGN.md` 为准。

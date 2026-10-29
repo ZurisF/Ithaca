@@ -306,6 +306,7 @@ async def append_user_opinion(
         receipt = await repo.get_append_receipt(db, operation_key)
         if receipt:
             if receipt["session_id"] != session_id or receipt["payload_hash"] != payload_hash:
+                # Keep the existing conflict code for the shared idempotency contract.
                 raise AppError(409, "answer_conflict", "同一追加请求不能使用不同内容。")
         else:
             content = append_to_section(content, "用户意见", addition)

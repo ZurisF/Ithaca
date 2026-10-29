@@ -1,7 +1,6 @@
 """One online retrieval boundary: dense + FTS + RRF + topic prior + reranker."""
 
 import asyncio
-import json
 import logging
 import math
 import time
@@ -16,6 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.bank.seed import lexical_terms
+from app.bank.vectors import checked_vector
 from app.db import engine
 from app.observability.trace import PostgresTraceSink
 from app.settings import get_settings
@@ -80,12 +80,6 @@ class LocalBGEModels:
 
     async def rerank(self, query: str, questions: list[str]) -> list[float]:
         return await asyncio.to_thread(self._rerank, query, questions)
-
-
-def _checked_vector(values: list[float]) -> str:
-    if len(values) != 1024 or not all(math.isfinite(value) for value in values):
-        raise ValueError("invalid BGE-M3 query vector")
-    return json.dumps(values, separators=(",", ":"))
 
 
 def _topic_weight(candidate: str, selected: str) -> float:
@@ -170,7 +164,7 @@ class QuestionRetriever:
         limit: int,
         attempt: int,
     ) -> list[QuestionCandidate]:
-        embedding = _checked_vector(
+        embedding = checked_vector(
             await self._model_call(
                 session_id, "retrieval_embedding", attempt, self.models.embed_query(query_text)
             )

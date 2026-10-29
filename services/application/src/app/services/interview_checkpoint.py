@@ -24,13 +24,45 @@ async def read_checkpoint(session_id: UUID) -> dict | None:
         await redis.aclose()
 
 
-async def write_checkpoint(session_id: UUID, *, awaiting: str, error: str | None = None) -> None:
+async def write_checkpoint(
+    session_id: UUID,
+    *,
+    awaiting: str,
+    error: str | None = None,
+    pending: dict | None = None,
+) -> None:
     redis = Redis.from_url(get_settings().redis_url)
     try:
+        raw = await redis.get(checkpoint_key(session_id))
+        old = json.loads(raw) if raw else {}
+        state = {
+            "awaiting": awaiting,
+            "last_error_code": error,
+            "compact": old.get("compact"),
+            "compacted_through_turn_no": old.get("compacted_through_turn_no", 0),
+        }
+        if pending is not None:
+            state["pending"] = pending
         await redis.set(
             checkpoint_key(session_id),
-            json.dumps({"awaiting": awaiting, "last_error_code": error}),
+            json.dumps(state, ensure_ascii=False),
             ex=60 * 60 * 24 * 30,
+        )
+    finally:
+        await redis.aclose()
+
+
+async def write_compact(session_id: UUID, *, compact: str, through_turn_no: int) -> None:
+    redis = Redis.from_url(get_settings().redis_url)
+    try:
+        raw = await redis.get(checkpoint_key(session_id))
+        state = json.loads(raw) if raw else {}
+        if through_turn_no <= state.get("compacted_through_turn_no", 0):
+            return
+        state["compact"] = compact
+        state["compacted_through_turn_no"] = through_turn_no
+        await redis.set(
+            checkpoint_key(session_id), json.dumps(state, ensure_ascii=False), ex=60 * 60 * 24 * 30
         )
     finally:
         await redis.aclose()

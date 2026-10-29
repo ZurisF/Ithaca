@@ -201,6 +201,7 @@ async def observe(root: Path, session_id: UUID, model: ModelAdapter) -> str:
             if exc.code == "dependency_unavailable":
                 raise LocalError(503, "dependency_unavailable", "模型尚未配置。") from exc
             raise LocalError(503, "observer_model_failed", "项目观察模型调用失败。") from exc
+        # Controlled adapters must pass the same deterministic barrier as production.
         if validate(step):
             raise LocalError(422, "observer_output_invalid", "项目观察结果未通过证据校验。")
         if step.action == "finish":

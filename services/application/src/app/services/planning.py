@@ -1,6 +1,7 @@
 """Planner command: read facts, call model outside a transaction, conditionally publish."""
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
@@ -24,8 +25,35 @@ def _asset(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _validate_versions(plan: InterviewPlan, direction: str, manifest: dict) -> list[str]:
-    errors = []
+@dataclass(frozen=True)
+class PlanningAssets:
+    manifest: dict
+    topics: dict
+    policy: dict
+
+
+def load_planning_assets() -> PlanningAssets:
+    manifest = _asset(ASSETS / "manifest.json")
+    return PlanningAssets(
+        manifest=manifest,
+        topics=_asset(ASSETS / "topics.yaml"),
+        policy=_asset(ASSETS / "policies" / f"{manifest['planning_policy']}.yaml"),
+    )
+
+
+def validate_plan_against_assets(
+    plan: InterviewPlan,
+    direction: str,
+    selected: list[SectionRef],
+    assets: PlanningAssets,
+) -> list[str]:
+    manifest = assets.manifest
+    errors = validate_plan(
+        plan,
+        selected,
+        {item["path"] for item in assets.topics["topics"]},
+        assets.policy["max_stages"],
+    )
     if plan.template_id != direction or plan.template_version != manifest["templates"][direction]:
         errors.append("template identity or version does not match")
     if plan.topic_registry_version != manifest["topic_registry"]:
@@ -46,9 +74,10 @@ async def get_plan(db: AsyncSession, identity: Identity, session_id: UUID) -> In
 async def generate_plan(
     db: AsyncSession, identity: Identity, session_id: UUID, model: ModelAdapter
 ) -> InterviewPlan:
-    manifest = _asset(ASSETS / "manifest.json")
-    topics = _asset(ASSETS / "topics.yaml")
-    policy = _asset(ASSETS / "policies" / f"{manifest['planning_policy']}.yaml")
+    assets = load_planning_assets()
+    manifest = assets.manifest
+    topics = assets.topics
+    policy = assets.policy
     prompt = PROMPT.read_text(encoding="utf-8")
 
     async with db.begin():
@@ -69,13 +98,8 @@ async def generate_plan(
             ASSETS / "templates" / direction / f"{manifest['templates'][direction]}.yaml"
         )
 
-    topic_paths = {item["path"] for item in topics["topics"]}
-
     def validate(candidate: InterviewPlan) -> list[str]:
-        return [
-            *validate_plan(candidate, selected, topic_paths, policy["max_stages"]),
-            *_validate_versions(candidate, direction, manifest),
-        ]
+        return validate_plan_against_assets(candidate, direction, selected, assets)
 
     payload = {
         "snapshot": snapshot,

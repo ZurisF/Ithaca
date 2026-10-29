@@ -260,6 +260,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/interviews/{session_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer */
+        post: operations["answer_v1_interviews__session_id__answers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/interviews/{session_id}/snapshot-corrections:resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve Correction */
+        post: operations["resolve_correction_v1_interviews__session_id__snapshot_corrections_resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/interviews/{session_id}/events": {
         parameters: {
             query?: never;
@@ -349,6 +383,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnswerRequest */
+        AnswerRequest: {
+            /** Turn No */
+            turn_no: number;
+            /** Answer */
+            answer: string;
+        };
+        /** CorrectionRequest */
+        CorrectionRequest: {
+            /** Turn No */
+            turn_no: number;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "confirm" | "do_not_write";
+            /** Edited Text */
+            edited_text?: string | null;
+        };
         /**
          * Direction
          * @enum {string}
@@ -410,6 +463,7 @@ export interface components {
             /** Current Stage Index */
             current_stage_index: number | null;
             current_turn: components["schemas"]["TurnView"] | null;
+            previous_turn?: components["schemas"]["TurnView"] | null;
             /** Awaiting */
             awaiting: ("answer" | "snapshot_confirmation" | "decision_retry") | null;
             /** Pending Correction */
@@ -1183,6 +1237,80 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_v1_interviews__session_id__answers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_correction_v1_interviews__session_id__snapshot_corrections_resolve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -6,8 +6,9 @@ from uuid import uuid4
 import pytest
 
 from local_project.inventory.repository_map import build_repository_map
-from local_project.inventory.walk import MAX_FILES, inventory
+from local_project.inventory.walk import inventory
 from local_project.observer.run import ObserverStep, observe
+from local_project.settings import get_settings
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/gate2"
 
@@ -58,14 +59,15 @@ async def test_documented_and_code_only_projects_have_evidence(fixture: str, ent
 
 @pytest.mark.asyncio
 async def test_oversized_project_is_explicitly_partial(tmp_path: Path) -> None:
+    max_items = get_settings().inventory_max_items
     root = tmp_path / "oversized"
     root.mkdir()
     (root / "00_main.py").write_text("def main():\n    return 1\n# entry\n", encoding="utf-8")
-    for index in range(MAX_FILES + 10):
+    for index in range(max_items + 10):
         (root / f"file_{index:04d}.py").write_text("def helper(): pass\n", encoding="utf-8")
     items, inventory_partial = inventory(root)
     assert inventory_partial
-    assert len(items) == MAX_FILES
+    assert len(items) == max_items
     repository_map = build_repository_map(root, items, inventory_partial=inventory_partial)
     assert repository_map.partial
     snapshot = await observe(root, uuid4(), EvidenceObserver("00_main.py", partial=True))

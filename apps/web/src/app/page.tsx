@@ -39,6 +39,9 @@ export default function Home() {
   const [interview, setInterview] = useState<Interview | null>(null);
   const [markdown, setMarkdown] = useState("");
   const [opinion, setOpinion] = useState("");
+  const [answerText, setAnswerText] = useState("");
+  const [correctionText, setCorrectionText] = useState("");
+  const [confirmationNotice, setConfirmationNotice] = useState("");
   const [direction, setDirection] = useState<Direction>("project_overview");
   const [selected, setSelected] = useState<Section[]>([]);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
@@ -46,6 +49,10 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const pendingOpinionKey = useRef<string | null>(null);
   const pendingObserveKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    setCorrectionText(interview?.pending_correction ?? "");
+  }, [interview?.pending_correction]);
 
   const loadSession = useCallback(async (id: string) => {
     const current = await api.GET("/v1/interviews/{session_id}", { params: { path: { session_id: id } }, headers });
@@ -302,21 +309,64 @@ export default function Home() {
         <p className="step">05 / INTERVIEW</p><h2 id="interview-title">当前面试</h2>
         {interview.current_stage_index !== null && interview.plan &&
           <p className="muted">阶段 {interview.current_stage_index + 1}：{interview.plan.stages[interview.current_stage_index]?.title}</p>}
-        {interview.current_turn ? <>
-          <p className="lead">{interview.current_turn.question}</p>
-          <p className="muted">第 {interview.current_turn.turn_no} 题。回答与后续追问将在 Gate 4 接入。</p>
+        {interview.previous_turn?.interviewer_message &&
+          <p className="muted">面试官：{interview.previous_turn.interviewer_message}</p>}
+        {interview.awaiting === "snapshot_confirmation" ? <>
+          <p className="muted">面试官识别到一条项目事实更正。请核对并编辑；确认后只追加到快照，不会重新生成本轮决策。</p>
+          <label htmlFor="correction">待追加内容</label>
+          <textarea id="correction" rows={4} maxLength={4000} value={correctionText}
+            disabled={busy} onChange={event => { setCorrectionText(event.target.value); setConfirmationNotice(""); }} />
+          {confirmationNotice && <p role="status">{confirmationNotice}</p>}
+          <div className="actions">
+            <button disabled={busy || !correctionText.trim()} onClick={() => void run(async () => {
+              const response = await api.POST("/v1/interviews/{session_id}/snapshot-corrections:resolve", {
+                params: { path: { session_id: session.id } }, headers,
+                body: { turn_no: interview.current_turn!.turn_no, decision: "confirm",
+                  edited_text: correctionText === interview.pending_correction ? null : correctionText },
+              });
+              if (!response.data) throw new Error(errorMessage(response.error));
+              if (response.data.awaiting === "snapshot_confirmation" && response.data.pending_correction !== correctionText)
+                setConfirmationNotice("敏感内容已替换。请检查最终文字并再次确认。");
+              else setConfirmationNotice("");
+              setInterview(response.data); setSession(response.data.session);
+              if (response.data.awaiting !== "snapshot_confirmation") await loadSession(session.id);
+            })}>确认写入快照</button>
+            <button disabled={busy} onClick={() => void run(async () => {
+              const response = await api.POST("/v1/interviews/{session_id}/snapshot-corrections:resolve", {
+                params: { path: { session_id: session.id } }, headers,
+                body: { turn_no: interview.current_turn!.turn_no, decision: "do_not_write" },
+              });
+              if (!response.data) throw new Error(errorMessage(response.error));
+              setConfirmationNotice(""); setInterview(response.data); setSession(response.data.session);
+            })}>暂不写入</button>
+          </div>
         </> : interview.awaiting === "decision_retry" ? <>
-          <p className="muted">首题生成暂时失败。可明确重试当前决策。</p>
+          <p className="muted">当前面试决策暂时失败。你可以明确重试，原回答不会被改写。</p>
           <div className="actions"><button disabled={busy} onClick={() => void run(async () => {
             const response = await api.POST("/v1/interviews/{session_id}/decision:retry", {
               params: { path: { session_id: session.id } }, headers,
             });
             if (!response.data) throw new Error(errorMessage(response.error));
             setInterview(response.data); setSession(response.data.session);
-          })}>重试首题</button></div>
-        </> : <p className="muted">首题正在生成；刷新后会从当前视图恢复。</p>}
+          })}>重试当前决策</button></div>
+        </> : interview.current_turn && interview.awaiting === "answer" ? <>
+          <p className="lead">{interview.current_turn.question}</p>
+          <p className="muted">第 {interview.current_turn.turn_no} 题</p>
+          <label htmlFor="answer">你的回答</label>
+          <textarea id="answer" rows={6} maxLength={8000} value={answerText}
+            disabled={busy} onChange={event => setAnswerText(event.target.value)} />
+          <div className="actions"><button disabled={busy || !answerText.trim()} onClick={() => void run(async () => {
+            const response = await api.POST("/v1/interviews/{session_id}/answers", {
+              params: { path: { session_id: session.id } }, headers,
+              body: { turn_no: interview.current_turn!.turn_no, answer: answerText },
+            });
+            if (!response.data) throw new Error(errorMessage(response.error));
+            setAnswerText(""); setInterview(response.data); setSession(response.data.session);
+          })}>{busy ? "处理中…" : "提交回答"}</button></div>
+        </> : interview.session.status === "interviewing" ?
+          <p className="muted">面试官正在处理当前回答。刷新后会从当前视图恢复。</p> :
+          <p className="muted">面试已结束。</p>}
       </section>}
     </>}
-    <footer>施工进度：首题发布已接入；回答、阶段推进和赛后功能仍在开发。</footer>
   </main>;
 }

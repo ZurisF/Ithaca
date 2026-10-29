@@ -38,7 +38,6 @@ ALLOWED_SUFFIXES = {
     ".ini",
     ".cfg",
 }
-MAX_FILES = 2_000
 
 
 @dataclass(frozen=True)

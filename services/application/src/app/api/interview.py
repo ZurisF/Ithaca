@@ -2,11 +2,12 @@
 
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +26,17 @@ Database = Annotated[AsyncSession, Depends(get_db)]
 CurrentIdentity = Annotated[Identity, Depends(get_identity)]
 CurrentModel = Annotated[ModelAdapter, Depends(get_model_adapter)]
 CurrentRetriever = Annotated[QuestionRetriever, Depends(get_retriever)]
+
+
+class AnswerRequest(BaseModel):
+    turn_no: int = Field(ge=1, le=100)
+    answer: str = Field(min_length=1, max_length=8_000)
+
+
+class CorrectionRequest(BaseModel):
+    turn_no: int = Field(ge=1, le=100)
+    decision: Literal["confirm", "do_not_write"]
+    edited_text: str | None = Field(default=None, min_length=1, max_length=4_000)
 
 
 @router.get("/{session_id}/current", response_model=InterviewView)
@@ -51,7 +63,42 @@ async def retry_decision(
     model: CurrentModel,
     retriever: CurrentRetriever,
 ) -> InterviewView:
-    return await service.retry_first_question(db, identity, session_id, model, retriever)
+    return await service.retry_decision(db, identity, session_id, model, retriever)
+
+
+@router.post("/{session_id}/answers", response_model=InterviewView)
+async def answer(
+    session_id: UUID,
+    body: AnswerRequest,
+    db: Database,
+    identity: CurrentIdentity,
+    model: CurrentModel,
+    retriever: CurrentRetriever,
+) -> InterviewView:
+    return await service.answer(
+        db, identity, session_id, body.turn_no, body.answer, model, retriever
+    )
+
+
+@router.post("/{session_id}/snapshot-corrections:resolve", response_model=InterviewView)
+async def resolve_correction(
+    session_id: UUID,
+    body: CorrectionRequest,
+    db: Database,
+    identity: CurrentIdentity,
+    model: CurrentModel,
+    retriever: CurrentRetriever,
+) -> InterviewView:
+    return await service.resolve_snapshot_correction(
+        db,
+        identity,
+        session_id,
+        body.turn_no,
+        body.decision,
+        body.edited_text,
+        model,
+        retriever,
+    )
 
 
 @router.get("/{session_id}/events")
